@@ -1,5 +1,4 @@
 name: fixed-1000-partitions
-gke_project: SET-PROJECT-ID
 ---
 ensemble:
   server:
