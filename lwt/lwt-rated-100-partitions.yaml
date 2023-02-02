@@ -1,0 +1,176 @@
+name: rated-100-partitions
+gke_project: SET-PROJECT-ID
+---
+ensemble:
+  server:
+    mark_for_reuse: false
+    node.count: 6
+    provisioner:
+      name: gke
+      properties:
+        name: {{name}}
+        project: {{gke_project}}
+        region: us-east4
+        machine.type: n2-standard-16
+        create.extra_args: |
+          --node-locations us-east4-a,us-east4-b,us-east4-c \
+          --no-enable-basic-auth \
+          --cluster-version "1.22" \
+          --image-type "COS" \
+          --disk-type "pd-ssd" \
+          --disk-size "20" \
+          --local-ssd-count 2 \
+          --metadata disable-legacy-endpoints=true \
+          --scopes "https://www.googleapis.com/auth/cloud-platform" \
+          --enable-ip-alias \
+          --default-max-pods-per-node "110" \
+          --addons HorizontalPodAutoscaling,HttpLoadBalancing \
+          --enable-autoupgrade \
+          --enable-autorepair \
+          --network "projects/{{gke_project}}/global/networks/default" \
+          --subnetwork "projects/{{gke_project}}/regions/us-east4/subnetworks/default" \
+          --cluster-ipv4-cidr=/21 \
+          --services-ipv4-cidr=/21
+    configuration_manager:
+      # Collects all pod logs as artifacts
+      - name: kubernetes_logs
+      # cert-manager
+      - name: kubernetes_manifest
+        properties:
+          manifest: <<file:cert-manager-crds.yaml>>
+          wait.strategy: FIXED_DURATION
+          wait.timeout: 5 minutes
+      # K8ssandra helm
+      - name: helm
+        properties:
+          namespace: k8ssandra-operator
+          helm.chart.name: k8ssandra/k8ssandra-operator
+          helm.install.type: repo
+          helm.install.name: k8ssandra-operator
+          helm.install.set:
+            - auth.rbac.enabled=false
+          helm.install.debug: true
+          helm.repo.name: k8ssandra
+          helm.repo.url: https://helm.k8ssandra.io/stable
+          helm.install.timeout: 10m
+          provider.class: com.datastax.fallout.components.cassandra.CassandraContactPointProvider
+          provider.args: ["performance-tester-dc1-service"]
+      # Deploys nosqlbench pod first, given it takes the largest share of CPU
+      - name: nosqlbench
+        properties:
+          image: nosqlbench/nosqlbench:4.15.90
+          namespace: k8ssandra-operator
+          replicas: 1
+          cpu: 7000m
+
+    local_files:
+      - path: cert-manager-crds.yaml
+        url: https://github.com/jetstack/cert-manager/releases/download/v1.5.3/cert-manager.yaml
+      - path: k8ssandra_cluster.yaml
+        yaml:
+          apiVersion: k8ssandra.io/v1alpha1
+          kind: K8ssandraCluster
+          metadata:
+            name: performance-tester
+            namespace: k8ssandra-operator
+          spec:
+            auth: false
+            cassandra:
+              serverVersion: "4.1.0"
+              datacenters:
+                - metadata:
+                    name: dc1
+                  size: 3
+                  storageConfig:
+                    cassandraDataVolumeClaimSpec:
+                      storageClassName: standard
+                      accessModes:
+                        - ReadWriteOnce
+                      resources:
+                        requests:
+                          storage: 5Gi
+                  config:
+                    jvmOptions:
+                      heapSize: 512M
+
+  client: server
+
+workload:
+  phases:
+    - create_k8ssandra_cluster_for_deployment:
+        module: kubectl
+        properties:
+          command: apply -f <<file:k8ssandra_cluster.yaml>>
+    # Wait for nb pod to come up
+    - nb_delay:
+        module: sleep
+        properties:
+          duration: 10m
+    - nb_create_ks:
+        module: nosqlbench
+        properties:
+          client.size: 1
+          args:
+            - type=cql
+            - yaml=https://gist.githubusercontent.com/mfleming/d0eb8a9af43aa32dab30ba91e91dde63/raw/4b1774f76afd3b2a1a40872159e868009afd8b7d/lwt.yaml
+            - tags=phase:schema
+            - cbopts=".withProtocolVersion(ProtocolVersion.V4)"
+    - nb_create_table:
+        module: nosqlbench
+        properties:
+          client.size: 1
+          args:
+            - type=cql
+            - yaml=https://gist.githubusercontent.com/mfleming/d0eb8a9af43aa32dab30ba91e91dde63/raw/4b1774f76afd3b2a1a40872159e868009afd8b7d/lwt.yaml
+            - tags=phase:table
+            - cbopts=".withProtocolVersion(ProtocolVersion.V4)"
+    - nb_prime_data:
+        module: nosqlbench
+        properties:
+          client.size: 1
+          cycles: 100
+          args:
+            - type=cql
+            - yaml=https://gist.githubusercontent.com/mfleming/d0eb8a9af43aa32dab30ba91e91dde63/raw/4b1774f76afd3b2a1a40872159e868009afd8b7d/lwt.yaml
+            - tags=phase:write-create-partitions
+            - partitions=100
+            - cbopts=".withProtocolVersion(ProtocolVersion.V4)"
+    - nb_write_lwt:
+        module: nosqlbench
+        properties:
+          duration: 30m
+          cycles: 1b
+          client.ordinals: '0,1,2,3,4'
+          args:
+            - type=cql
+            - yaml=https://gist.githubusercontent.com/mfleming/d0eb8a9af43aa32dab30ba91e91dde63/raw/4b1774f76afd3b2a1a40872159e868009afd8b7d/lwt.yaml
+            - tags=phase:write-lwt
+            - errors=histogram
+            - partitions=100
+            - targetrate=5000
+            - threads=900
+            - maxtries=1
+            - pooling=1:1:1024
+            - cbopts=".withProtocolVersion(ProtocolVersion.V4).withLoadBalancingPolicy(LatencyAwarePolicy.builder(new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().build())).build())"
+      nb_read:
+        module: nosqlbench
+        properties:
+          cycles: 1b
+          duration: 30m
+          client.ordinals: '5,6,7'
+          args:
+            - type=cql
+            - yaml=https://gist.githubusercontent.com/mfleming/d0eb8a9af43aa32dab30ba91e91dde63/raw/4b1774f76afd3b2a1a40872159e868009afd8b7d/lwt.yaml
+            - tags=phase:read
+            - errors=histogram
+            - threads=300
+            - targetrate=10000
+            - maxtries=1
+            - pooling=1:1:1024
+            - cbopts=".withProtocolVersion(ProtocolVersion.V4).withLoadBalancingPolicy(LatencyAwarePolicy.builder(new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().build())).build())"
+  checkers:
+    nofail:
+      checker: nofail
+  artifact_checkers:
+    generate_chart:
+      artifact_checker: hdrtool

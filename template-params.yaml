@@ -1,0 +1,7 @@
+image:
+  name: datastax/fallout
+  version: 1.288.0
+helmchart:
+  reponame: k8ssandra
+  repourl: https://helm.k8ssandra.io/stable
+  chartname: k8ssandra/k8ssandra-operator
