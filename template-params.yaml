@@ -1,4 +1,4 @@
-image:
+gke_project: SET_PROJECT_ID
   name: datastax/fallout
   version: 1.288.0
 helmchart:
