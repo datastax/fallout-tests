@@ -2,7 +2,7 @@
 
 
 ## What is Fallout
-[Fallout](https://github.com/datastax/fallout) is a tool for running local or large scale remote-based distributed correctness, verification and performance tests. Fallout is run in production at DataStax facilitating mission critical testing of Apache Cassandra (TM) and Apache Pulsar (TM).
+[Fallout](https://github.com/datastax/fallout) is a tool for running large scale remote-based distributed correctness, verification and performance tests for Apache Cassandra (TM) and Apache Pulsar (TM).
 
 Fallout uses Kubernetes and the Helm Chart to deploy the services and run the tests. The size of the cluster is limited only by the available resources.
 ## What this repository is for
