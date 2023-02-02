@@ -1,0 +1,10 @@
+email: your.email@localhost.com
+
+defaultGoogleCloudServiceAccountEmail: XXXXXXXXXX-compute@developer.gserviceaccount.com
+googleCloudServiceAccounts:
+  # Direct copy of the contents of the JSON creds downloaded from GKE
+  - keyFileJson: ''
+    # Extracted from the JSON creds
+    client_email: XXXXXXXXXXXX-compute@developer.gserviceaccount.com
+    project_id: XXXXXXXXXXX
+    private_key_id: 9d4a2XXXXXXXXXXXXXXXXX
