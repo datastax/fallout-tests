@@ -6,7 +6,7 @@
 
 Fallout uses Kubernetes and the Helm Chart to deploy the services and run the tests. The size of the cluster is limited only by the available resources.
 ## What this repository is for
-This repository enables to run performance tests on Cassandra 
+This repository contains performance tests for Cassandra 
 databases using the [Fallout tool](https://github.com/datastax/fallout).
 
 ## Dependencies
