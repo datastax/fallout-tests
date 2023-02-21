@@ -75,7 +75,8 @@ ensemble:
           spec:
             auth: false
             cassandra:
-              serverVersion: "4.1.0"
+              serverVersion: "4.2.0"
+              serverImage: "k8ssandra/cass-management-api:4.2-nightly-latest"
               datacenters:
                 - metadata:
                     name: dc1
@@ -91,6 +92,9 @@ ensemble:
                   config:
                     jvmOptions:
                       heapSize: 512M
+              telemetry:
+                mcac:
+                  enabled: false
 
   client: server
 
