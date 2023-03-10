@@ -75,8 +75,8 @@ ensemble:
           spec:
             auth: false
             cassandra:
-              serverVersion: "4.2.0"
-              serverImage: "k8ssandra/cass-management-api:4.2-nightly-latest"
+              serverVersion: "5.0"
+              serverImage: "k8ssandra/cass-management-api:5.0-nightly-latest"
               datacenters:
                 - metadata:
                     name: dc1
