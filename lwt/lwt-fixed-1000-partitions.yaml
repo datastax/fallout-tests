@@ -75,7 +75,7 @@ ensemble:
           spec:
             auth: false
             cassandra:
-              serverVersion: "5.0"
+              serverVersion: "4.2.0"  # Set to 4.2.0 to pass regex validation in cass-operator (still running on Cassandra 5.0 trunk as per below)
               serverImage: "k8ssandra/cass-management-api:5.0-nightly-latest"
               datacenters:
                 - metadata:
