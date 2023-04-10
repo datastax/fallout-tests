@@ -1,0 +1,11 @@
+[run]
+source = src
+
+[report]
+omit =
+    */__init__.py
+    */constants.py
+    src/scripts/create_hunter_csv.py
+
+exclude_lines =
+    pragma: no cover
