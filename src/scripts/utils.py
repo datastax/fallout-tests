@@ -100,25 +100,25 @@ def get_commit_hash_cass_fall_tests(
         # cd into cloned Cassandra to then get its latest git SHA
         cd_into_proj_dir(CASSANDRA_PROJ_DIR)
         g = git.cmd.Git(CASSANDRA_PROJ_DIR)
-        g.pull()
+        g.pull('origin', 'trunk')
         cassandra_git_hash = get_git_sha_prospective()
 
         # cd into cloned fallout-tests to then get its latest git SHA
         cd_into_proj_dir(FALLOUT_TESTS_PROJ_DIR)
         g = git.cmd.Git(FALLOUT_TESTS_PROJ_DIR)
-        g.pull()
+        g.pull('origin', 'main')
         fallout_tests_git_hash = get_git_sha_prospective()
     else:
         # cd into cloned Cassandra to then get its git SHA corresponding to the date of interest
         cd_into_proj_dir(CASSANDRA_PROJ_DIR)
         g = git.cmd.Git(CASSANDRA_PROJ_DIR)
-        g.pull()
+        g.pull('origin', 'trunk')
         cassandra_git_hash = get_git_sha_retrospective(sorted_date)
 
         # cd into cloned fallout-tests to then get its git SHA corresponding to the date of interest
         cd_into_proj_dir(FALLOUT_TESTS_PROJ_DIR)
         g = git.cmd.Git(FALLOUT_TESTS_PROJ_DIR)
-        g.pull()
+        g.pull('origin', 'main')
         fallout_tests_git_hash = get_git_sha_retrospective(sorted_date)
 
     return cassandra_git_hash, fallout_tests_git_hash

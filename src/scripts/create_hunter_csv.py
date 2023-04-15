@@ -15,8 +15,9 @@ from constants import (DICT_OF_RENAMED_COLS, FIXED_100_CSV_NAME,
                        FIXED_1000_CSV_NAME, FIXED_10000_CSV_NAME, FMT_Y_D_M,
                        FMT_Y_M_D, HUNTER_FILE_FMT, LIST_OF_COLS_TO_EXTRACT,
                        LWT_TEST_RUN_EXEC_TIME, LWT_TESTS_NAMES,
-                       NIGHTLY_RESULTS_DIR, RATED_100_CSV_NAME,
-                       RATED_1000_CSV_NAME, RATED_10000_CSV_NAME)
+                       NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
+                       RATED_100_CSV_NAME, RATED_1000_CSV_NAME,
+                       RATED_10000_CSV_NAME)
 from utils import (add_cols_to_metrics_df, add_suffix_to_col, cd_into_proj_dir,
                    get_commit_hash_cass_fall_tests, get_error_log,
                    get_relevant_dict, get_yesterday_date)
@@ -85,7 +86,7 @@ def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
     input_df.to_csv(path_to_output, index=False)
 
 
-def get_paths_to_six_json(path_w_spec_date: str) -> List[str]:  
+def get_paths_to_six_json(path_w_spec_date: str) -> List[str]:
     """
     Get the paths to the six json files of the performance results, i.e., one for each
     type of performance test (100/1000/10000 partitions, fixed or rated).
@@ -110,14 +111,16 @@ def get_paths_to_six_json(path_w_spec_date: str) -> List[str]:
     return paths_to_each_json
 
 
-def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:  
+def generate_hunter_df(json_paths: List[str], is_prospective: bool = PROSPECTIVE_MODE) -> pd.DataFrame:
     """
     Generate the dataframe of test type-specific performance results and the
-    corresponding csv file to be fed to hunter.
+    corresponding csv file to be fed to hunter based on whether the analysis is prospective.
 
     Args:
         json_paths: List[str]
                     A list of json paths with performance results and related metrics.
+        is_prospective: bool
+                    Whether the analysis is prospective (True by default).
 
     Returns:
             A dataframe of test type-specific performance results.
@@ -158,12 +161,11 @@ def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:
 
         # Prospective case is when running hunter nightly; retrospective is when running it
         # on already output dates-related folders of performance results (one-off analysis).
-        is_hash_prospective = False
-        if is_hash_prospective:
-            cassandra_git_short_hash, fallout_tests_git_short_hash = get_commit_hash_cass_fall_tests()
+        if is_prospective:
+            cassandra_git_short_hash, fallout_tests_git_short_hash = \
+                get_commit_hash_cass_fall_tests(is_prospective=is_prospective)
 
         else:
-
             # Swap month and day to match expected format for the git log command below
             list_of_elems = date_val.split('_')
             # Plus one day to then get the date's Git sha (as using 'until' in git log command)
@@ -173,7 +175,8 @@ def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:
             ) + timedelta(days=1)
             date_sorted_y_d_m = date_sorted.strftime(FMT_Y_D_M)
             cassandra_git_short_hash, fallout_tests_git_short_hash = \
-                get_commit_hash_cass_fall_tests(date_sorted_y_d_m, False)
+                get_commit_hash_cass_fall_tests(
+                    date_sorted_y_d_m, is_prospective)
 
         # cd back into hunter_csv
         cd_into_proj_dir()
@@ -189,19 +192,21 @@ def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:
         return hunter_df_full
 
 
-def get_hunter_df_w_test_type(json_paths: List[str]) -> Tuple[pd.DataFrame, str]:  
+def get_hunter_df_w_test_type(json_paths: List[str], is_prospective: bool = PROSPECTIVE_MODE) -> Tuple[pd.DataFrame, str]:
     """
     Get the dataframe to feed to hunter with performance results and the corresponding test type (e.g., 100/1000/10000
-    partitions and either 'fixed' or 'rated').
+    partitions and either 'fixed' or 'rated') based on whether the analysis is prospective.
 
     Args:
         json_paths: List[str]
                     A list of json paths with performance results and related metrics.
+        is_prospective: bool
+                    Whether the analysis is prospective (True by default).
 
     Returns:
             A tuple with the dataframe with performance results and the corresponding test type.
     """
-    hunter_df_out = generate_hunter_df(json_paths)
+    hunter_df_out = generate_hunter_df(json_paths, is_prospective)
 
     if len(json_paths) == 0 or hunter_df_out.empty:
         logging.error(
@@ -228,8 +233,8 @@ if __name__ == '__main__':
     nightly_result_dates.sort()
 
     # Set to False if running this for the first time, then re-run and set to True.
-    is_prospective = False
-    if is_prospective:
+    is_case_prospective = PROSPECTIVE_MODE
+    if is_case_prospective:
         # cd into hunter_csv
         cd_into_proj_dir()
 
@@ -258,7 +263,8 @@ if __name__ == '__main__':
         list_of_type_of_tests = []
         for test_json_path in path_to_each_test_json:
 
-            hunter_df, type_of_test = get_hunter_df_w_test_type(test_json_path)
+            hunter_df, type_of_test = get_hunter_df_w_test_type(
+                test_json_path, is_case_prospective)
             if type_of_test != '' and not hunter_df.empty:
                 list_of_hunter_df.append(hunter_df)
                 list_of_type_of_tests.append(type_of_test)
@@ -316,7 +322,7 @@ if __name__ == '__main__':
             for test_json_path in path_to_each_test_json:
 
                 hunter_df, type_of_test = get_hunter_df_w_test_type(
-                    test_json_path)
+                    test_json_path, is_case_prospective)
 
                 if type_of_test != '':
                     types_of_tests.append(type_of_test)

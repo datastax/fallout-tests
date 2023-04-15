@@ -51,3 +51,7 @@ template-params        Template params for test-yaml-file in the form
 ## How to generate a csv for Hunter
 - Run `python src/scripts/create_hunter_csv.py`
 - 6 csv files will be output in the top-level directory, which can be fed to Hunter (one at a time for each type of test)
+
+## Linting
+- Run `isort src` to ensure a correct and consistent order of imports across all `.py` files
+- Run `cd src` and then execute `autopep8 --in-place --recursive .` to ensure adherence to PEP-8 Python coding and styling standards
