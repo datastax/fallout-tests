@@ -369,7 +369,7 @@ if __name__ == '__main__':
                 save_df_to_csv(hunter_df_100_fixed,
                                f'{hunter_file_name}{two_git_sha_suffix}')
 
-                hunter_df_100_fixed_w_one_git_sha = hunter_df_100_fixed.drop(col_to_drop)
+                hunter_df_100_fixed_w_one_git_sha = hunter_df_100_fixed.drop(col_to_drop, axis=1)
                 save_df_to_csv(hunter_df_100_fixed_w_one_git_sha, hunter_file_name)
             elif '-rated-100-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}{HUNTER_FILE_FMT}'
@@ -377,7 +377,7 @@ if __name__ == '__main__':
                 save_df_to_csv(hunter_df_100_rated,
                                f'{hunter_file_name}{two_git_sha_suffix}')
 
-                hunter_df_100_rated_w_one_git_sha = hunter_df_100_rated.drop(col_to_drop)
+                hunter_df_100_rated_w_one_git_sha = hunter_df_100_rated.drop(col_to_drop, axis=1)
                 save_df_to_csv(hunter_df_100_rated_w_one_git_sha, hunter_file_name)
             elif '-fixed-1000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}{HUNTER_FILE_FMT}'
@@ -385,7 +385,7 @@ if __name__ == '__main__':
                 save_df_to_csv(hunter_df_1000_fixed,
                                f'{hunter_file_name}{two_git_sha_suffix}')
 
-                hunter_df_1000_fixed_w_one_git_sha = hunter_df_1000_fixed.drop(col_to_drop)
+                hunter_df_1000_fixed_w_one_git_sha = hunter_df_1000_fixed.drop(col_to_drop, axis=1)
                 save_df_to_csv(hunter_df_1000_fixed_w_one_git_sha, hunter_file_name)
             elif '-rated-1000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}{HUNTER_FILE_FMT}'
@@ -393,7 +393,7 @@ if __name__ == '__main__':
                 save_df_to_csv(hunter_df_1000_rated,
                                f'{hunter_file_name}{two_git_sha_suffix}')
 
-                hunter_df_1000_rated_w_one_git_sha = hunter_df_1000_rated.drop(col_to_drop)
+                hunter_df_1000_rated_w_one_git_sha = hunter_df_1000_rated.drop(col_to_drop, axis=1)
                 save_df_to_csv(hunter_df_1000_rated_w_one_git_sha, hunter_file_name)
             elif '-fixed-10000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}{HUNTER_FILE_FMT}'
@@ -401,7 +401,7 @@ if __name__ == '__main__':
                 save_df_to_csv(hunter_df_10000_fixed,
                                f'{hunter_file_name}{two_git_sha_suffix}')
 
-                hunter_df_10000_fixed_w_one_git_sha = hunter_df_10000_fixed.drop(col_to_drop)
+                hunter_df_10000_fixed_w_one_git_sha = hunter_df_10000_fixed.drop(col_to_drop, axis=1)
                 save_df_to_csv(hunter_df_10000_fixed_w_one_git_sha, hunter_file_name)
             elif '-rated-10000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}{HUNTER_FILE_FMT}'
@@ -409,7 +409,7 @@ if __name__ == '__main__':
                 save_df_to_csv(hunter_df_10000_rated,
                                f'{hunter_file_name}{two_git_sha_suffix}')
 
-                hunter_df_10000_rated_w_one_git_sha = hunter_df_10000_rated.drop(col_to_drop)
+                hunter_df_10000_rated_w_one_git_sha = hunter_df_10000_rated.drop(col_to_drop, axis=1)
                 save_df_to_csv(hunter_df_10000_rated_w_one_git_sha, hunter_file_name)
             else:
                 get_error_log(unique_test_type)
