@@ -11,9 +11,11 @@ from typing import Tuple
 
 import git
 import pandas as pd
-from constants import (CASSANDRA_PROJ_DIR, FALLOUT_TESTS_PROJ_DIR, FMT_TIME,
-                       FMT_Y_D_M, FMT_Y_M_D, HUNTER_CSV_PROJ_DIR,
-                       LWT_TEST_RUN_EXEC_TIME, PROSPECTIVE_MODE)
+from constants import (CASSANDRA_COL_NAME, CASSANDRA_PROJ_DIR,
+                       FALLOUT_TESTS_COL_NAME, FALLOUT_TESTS_PROJ_DIR,
+                       FIXED_100_CSV_NAME, FMT_TIME, FMT_Y_D_M, FMT_Y_M_D,
+                       HUNTER_CSV_PROJ_DIR, LWT_TEST_RUN_EXEC_TIME,
+                       PROSPECTIVE_MODE)
 
 
 def add_cols_to_metrics_df(
@@ -42,8 +44,8 @@ def add_cols_to_metrics_df(
 
     combined_columns_df = extract_col_from_raw_df.copy()
     combined_columns_df['time'] = date_time
-    combined_columns_df['commit'] = cassandra_commit
-    combined_columns_df['fallout_tests_commit'] = fallout_tests_commit
+    combined_columns_df[CASSANDRA_COL_NAME] = cassandra_commit
+    combined_columns_df[FALLOUT_TESTS_COL_NAME] = fallout_tests_commit
     return combined_columns_df
 
 
@@ -164,16 +166,33 @@ def get_git_sha_prospective(date_fmt: str = FMT_Y_D_M) -> str:  # pragma: no cov
     # The Git SHAs are already sorted from the most to the least recent, thus getting the
     # first item from the list (expecting the hash as the first element based on the
     # --pretty=format:'%h %ci'" above).
-    final_sha = split_gitsha[0]
-    logging.debug(
-        f"Retrieved Git sha {final_sha} for today's date '{today_date}'.")
-    return final_sha
+    if len(split_gitsha) > 0:
+        final_sha = split_gitsha[0]
+        logging.debug(
+            f"Retrieved Git sha {final_sha} for today's date '{today_date}'.")
+        return final_sha
+    # If len == 0, get the latest Git sha from the last row in the previous csv file (any test types as Git shas are the
+    # same regardless of them).
+    else:
+        df_retrospective = pd.read_csv(
+            f'{HUNTER_CSV_PROJ_DIR}{FIXED_100_CSV_NAME}')
+        # Get current working directory ('pwd' in bash)
+        cwd = os.getcwd()
+        latest_git_sha = ''
+        if cwd == CASSANDRA_PROJ_DIR:
+            latest_git_sha = df_retrospective[CASSANDRA_COL_NAME][-1]
+        elif cwd == FALLOUT_TESTS_PROJ_DIR:
+            latest_git_sha = df_retrospective[FALLOUT_TESTS_COL_NAME][-1]
+        else:
+            logging.error(f"The directory '{cwd} is not one of the two expected Git repos ('{CASSANDRA_PROJ_DIR}' or "
+                          f"{FALLOUT_TESTS_PROJ_DIR}). Please provide either one or the other, and retry.")
+        return latest_git_sha
 
 
 def get_git_sha_retrospective(given_date: str) -> str:  # pragma: no cover
     """
-    Return the Git short hash of a repo given a specific date. If no commits were found for a given date,
-    the Git sha of the latest commit would be taken.
+    Return the Git short hash of a repo given a specific date but on or before 11pm UTC (the time of the run on the VM).
+    If no commits were found for a given date, the Git sha of the latest commit would be taken.
 
     Args:
         given_date: str
@@ -211,13 +230,14 @@ def get_git_sha_retrospective(given_date: str) -> str:  # pragma: no cover
     gitsha_local_w_commas = gitsha_local.replace('\n', ',').replace(' ', ',')
     gitsha_local_list = gitsha_local_w_commas.split(',')
 
-    # Remove time zones (e.g., '-0700')
+    # Remove time zones (e.g., '-0700') from the list 'gitsha_until_list'
     counter_until = 0
     for _ in gitsha_until_list:
         while counter_until < len(gitsha_until_list) - 3:
             counter_until += 3
             gitsha_until_list.pop(counter_until)
 
+    # Get list of local times from the list 'gitsha_local_list'
     counter_local = 0
     list_of_local_times = []
     counter_loop = 0
@@ -230,6 +250,8 @@ def get_git_sha_retrospective(given_date: str) -> str:  # pragma: no cover
             list_of_local_times.append(gitsha_local_list[counter_local])
             counter_loop += 1
 
+    # Replace previous time in the list 'gitsha_until_list' (without time zone as popped/removed above) with
+    # the correct local time extracted in the list 'list_of_local_times' above
     counter_loop = 0
     counter_until_replace = 0
     for local_time in list_of_local_times:
@@ -242,18 +264,21 @@ def get_git_sha_retrospective(given_date: str) -> str:  # pragma: no cover
             counter_until_replace += 3
         counter_loop += 1
 
+    # Get the final git sha
     counter_date = 0
     for _ in gitsha_until_list:
         while not counter_date == len(gitsha_until_list) - 1:
             counter_date += 1
             if given_date == gitsha_until_list[counter_date]:
                 corresp_time = gitsha_until_list[counter_date + 1]
+                # Get git sha of the same date but on or before 11pm UTC
                 if datetime.strptime(corresp_time, FMT_TIME) <= datetime.strptime(LWT_TEST_RUN_EXEC_TIME, FMT_TIME):
                     corresp_git_sha = gitsha_until_list[counter_date - 1]
                     logging.debug(
                         f"The Git commit sha {corresp_git_sha} was retrieved for the date '{given_date}'."
                     )
                     return corresp_git_sha
+                # As the time is after 11pm UTC, get git sha of the same date but before 11pm UTC
                 else:
                     while not counter_date == len(gitsha_until_list) - 3:
                         counter_date += 3
@@ -267,6 +292,7 @@ def get_git_sha_retrospective(given_date: str) -> str:  # pragma: no cover
                                     f"The Git commit sha {corresp_git_sha} was retrieved for the date '{given_date}'."
                                 )
                                 return corresp_git_sha
+            # Get the latest git sha (of a different/previous date)
             else:
                 corresp_git_sha = gitsha_until_list[counter_date - 1]
                 logging.debug(

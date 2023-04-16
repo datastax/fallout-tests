@@ -8,6 +8,10 @@ FALLOUT_TESTS_PROJ_DIR = '/home/ec2-user/fallout-tests'
 HUNTER_CSV_PROJ_DIR = '/home/ec2-user/hunter_csv'
 NIGHTLY_RESULTS_DIR = '/home/ec2-user/nightly_results'
 
+# Commit-related column names
+CASSANDRA_COL_NAME = 'commit'  # Name as expected by Hunter
+FALLOUT_TESTS_COL_NAME = 'fallout_tests_commit'
+
 # Time and date formats
 FMT_TIME = '%H:%M:%S'
 FMT_Y_D_M = '%Y_%d_%m'
