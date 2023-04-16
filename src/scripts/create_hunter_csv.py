@@ -254,6 +254,11 @@ if __name__ == '__main__':
 
         # Get date from the latest test run
         test_input_date = nightly_result_dates[-1]
+
+        if test_input_date == hunter_df_fixed_100['time'].iloc[-1].split(' ')[0]:
+            raise ValueError(f"The test results for the date '{test_input_date}' were already run and summarised "
+                             f"in the csv file. Please ensure the date considered is not in the csv file and it is "
+                             f"past the latest date in the csv file.")
         type_of_test = type(test_input_date)
 
         yesterday_s_date = get_yesterday_date(FMT_Y_M_D)
