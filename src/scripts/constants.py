@@ -19,12 +19,12 @@ FMT_Y_M_D = '%Y_%m_%d'
 
 # Hunter csv file names and associated LWT tests-related constants
 HUNTER_FILE_FMT = '.csv'
-FIXED_100_CSV_NAME = f'hunter-lwt-fixed-100-partitions{HUNTER_FILE_FMT}'
-RATED_100_CSV_NAME = f'hunter-lwt-rated-100-partitions{HUNTER_FILE_FMT}'
-FIXED_1000_CSV_NAME = f'hunter-lwt-fixed-1000-partitions{HUNTER_FILE_FMT}'
-RATED_1000_CSV_NAME = f'hunter-lwt-rated-1000-partitions{HUNTER_FILE_FMT}'
-FIXED_10000_CSV_NAME = f'hunter-lwt-fixed-10000-partitions{HUNTER_FILE_FMT}'
-RATED_10000_CSV_NAME = f'hunter-lwt-rated-10000-partitions{HUNTER_FILE_FMT}'
+FIXED_100_CSV_NAME = 'hunter-lwt-fixed-100-partitions'
+RATED_100_CSV_NAME = 'hunter-lwt-rated-100-partitions'
+FIXED_1000_CSV_NAME = 'hunter-lwt-fixed-1000-partitions'
+RATED_1000_CSV_NAME = 'hunter-lwt-rated-1000-partitions'
+FIXED_10000_CSV_NAME = 'hunter-lwt-fixed-10000-partitions'
+RATED_10000_CSV_NAME = 'hunter-lwt-rated-10000-partitions'
 
 LWT_TESTS_NAMES = [
     'lwt-fixed-100-partitions', 'lwt-fixed-1000-partitions', 'lwt-fixed-10000-partitions',
@@ -34,6 +34,8 @@ LWT_TESTS_NAMES = [
 LWT_TEST_RUN_EXEC_TIME = '23:00:00'
 
 PROSPECTIVE_MODE = True
+
+TWO_GIT_SHA_SUFFIX = '-w-two-git-shas'
 
 # Metrics' columns for Hunter
 LIST_OF_COLS_TO_EXTRACT = [

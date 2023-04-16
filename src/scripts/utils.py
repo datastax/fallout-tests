@@ -14,8 +14,8 @@ import pandas as pd
 from constants import (CASSANDRA_COL_NAME, CASSANDRA_PROJ_DIR,
                        FALLOUT_TESTS_COL_NAME, FALLOUT_TESTS_PROJ_DIR,
                        FIXED_100_CSV_NAME, FMT_TIME, FMT_Y_D_M, FMT_Y_M_D,
-                       HUNTER_CSV_PROJ_DIR, LWT_TEST_RUN_EXEC_TIME,
-                       PROSPECTIVE_MODE)
+                       HUNTER_CSV_PROJ_DIR, HUNTER_FILE_FMT,
+                       LWT_TEST_RUN_EXEC_TIME, PROSPECTIVE_MODE)
 
 
 def add_cols_to_metrics_df(
@@ -175,7 +175,7 @@ def get_git_sha_prospective(date_fmt: str = FMT_Y_D_M) -> str:  # pragma: no cov
     # same regardless of them).
     else:
         df_retrospective = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}')
+            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
         # Get current working directory ('pwd' in bash)
         cwd = os.getcwd()
         latest_git_sha = ''
