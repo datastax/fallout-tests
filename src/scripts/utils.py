@@ -180,9 +180,9 @@ def get_git_sha_prospective(date_fmt: str = FMT_Y_D_M) -> str:  # pragma: no cov
         cwd = os.getcwd()
         latest_git_sha = ''
         if cwd == CASSANDRA_PROJ_DIR:
-            latest_git_sha = df_retrospective[CASSANDRA_COL_NAME][-1]
+            latest_git_sha = df_retrospective[CASSANDRA_COL_NAME].iloc[-1]
         elif cwd == FALLOUT_TESTS_PROJ_DIR:
-            latest_git_sha = df_retrospective[FALLOUT_TESTS_COL_NAME][-1]
+            latest_git_sha = df_retrospective[FALLOUT_TESTS_COL_NAME].iloc[-1]
         else:
             logging.error(f"The directory '{cwd} is not one of the two expected Git repos ('{CASSANDRA_PROJ_DIR}' or "
                           f"{FALLOUT_TESTS_PROJ_DIR}). Please provide either one or the other, and retry.")
