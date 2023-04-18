@@ -8,7 +8,6 @@ dependencies:
   - pytest=7.2.2
   - pytest-cov=4.0.0
   - autopep8
-  - GitPython=3.1.31
   - isort
   - pip
   - pip:

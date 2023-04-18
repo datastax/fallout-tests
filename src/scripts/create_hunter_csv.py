@@ -14,13 +14,13 @@ import pandas as pd
 from constants import (DICT_OF_RENAMED_COLS, FALLOUT_TESTS_COL_NAME,
                        FIXED_100_CSV_NAME, FIXED_1000_CSV_NAME,
                        FIXED_10000_CSV_NAME, FMT_Y_D_M, FMT_Y_M_D,
-                       HUNTER_FILE_FMT, LIST_OF_COLS_TO_EXTRACT,
-                       LWT_TEST_RUN_EXEC_TIME, LWT_TESTS_NAMES,
-                       NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
+                       HUNTER_CSV_PROJ_DIR, HUNTER_FILE_FMT,
+                       LIST_OF_COLS_TO_EXTRACT, LWT_TEST_RUN_EXEC_TIME,
+                       LWT_TESTS_NAMES, NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
                        RATED_100_CSV_NAME, RATED_1000_CSV_NAME,
                        RATED_10000_CSV_NAME, TUPLE_SUPPORTED_TESTS,
                        TWO_GIT_SHA_SUFFIX)
-from utils import (add_cols_to_metrics_df, add_suffix_to_col, cd_into_proj_dir,
+from utils import (add_cols_to_metrics_df, add_suffix_to_col,
                    get_commit_hash_cass_fall_tests, get_error_log,
                    get_relevant_dict, get_yesterday_date)
 
@@ -180,9 +180,6 @@ def generate_hunter_df(json_paths: List[str], is_prospective: bool = PROSPECTIVE
                 get_commit_hash_cass_fall_tests(
                     date_sorted_y_d_m, is_prospective)
 
-        # cd back into hunter_csv
-        cd_into_proj_dir()
-
         combined_read_write_df = create_hunter_df(raw_hunter_metrics_df)
 
         hunter_df_full = add_cols_to_metrics_df(
@@ -231,32 +228,25 @@ def get_hunter_df_w_test_type(
 
 
 if __name__ == '__main__':
-    # cd into nightly_results
-    nightly_result_path = NIGHTLY_RESULTS_DIR
-    cd_into_proj_dir(nightly_result_path)
-
     # Get sorted list of dates from output folders with performance tests
-    nightly_result_dates = os.listdir(nightly_result_path)
+    nightly_result_dates = os.listdir(NIGHTLY_RESULTS_DIR)
     nightly_result_dates.sort()
 
     # Set to False if running this for the first time, then re-run and set to True.
     is_case_prospective = PROSPECTIVE_MODE
     if is_case_prospective:
-        # cd into hunter_csv
-        cd_into_proj_dir()
-
         hunter_df_fixed_100 = pd.read_csv(
-            f'{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
+            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
         hunter_df_rated_100 = pd.read_csv(
-            f'{RATED_100_CSV_NAME}{HUNTER_FILE_FMT}')
+            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{HUNTER_FILE_FMT}')
         hunter_df_fixed_1000 = pd.read_csv(
-            f'{FIXED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
+            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
         hunter_df_rated_1000 = pd.read_csv(
-            f'{RATED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
+            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
         hunter_df_fixed_10000 = pd.read_csv(
-            f'{FIXED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
+            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
         hunter_df_rated_10000 = pd.read_csv(
-            f'{RATED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
+            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
 
         # Get date from the latest test run
         test_input_date = nightly_result_dates[-1]
@@ -274,11 +264,7 @@ if __name__ == '__main__':
         yesterday_s_date = get_yesterday_date(FMT_Y_M_D)
 
         # Get path to the latest test run
-        path_w_date = f'{nightly_result_path}{os.sep}{test_input_date}'
-
-        # cd into filename with a date-specific test run (path_w_date)
-        cd_into_proj_dir(path_w_date)
-
+        path_w_date = f'{NIGHTLY_RESULTS_DIR}{os.sep}{test_input_date}'
         path_to_each_test_json = get_paths_to_json(path_w_date)
 
         list_of_hunter_df = []
@@ -318,46 +304,46 @@ if __name__ == '__main__':
         # Save two versions of the df: 1) with the Cassandra git shas only (for hunter), 2) with two git shas (of the
         # Cassandra and fallout-tests repos) for auditability
         save_df_to_csv(concat_df_100_fixed,
-                       f'{FIXED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
         concat_df_100_fixed_w_one_git_sha = concat_df_100_fixed.drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_100_fixed_w_one_git_sha,
-                       f'{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
 
         save_df_to_csv(concat_df_100_rated,
-                       f'{RATED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
         concat_df_100_rated_w_one_git_sha = concat_df_100_rated.drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_100_rated_w_one_git_sha,
-                       f'{RATED_100_CSV_NAME}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{HUNTER_FILE_FMT}')
 
         save_df_to_csv(concat_df_1000_fixed,
-                       f'{FIXED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
         concat_df_1000_fixed_w_one_git_sha = concat_df_1000_fixed.drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_1000_fixed_w_one_git_sha,
-                       f'{FIXED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
 
         save_df_to_csv(concat_df_1000_rated,
-                       f'{RATED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
         concat_df_1000_rated_w_one_git_sha = concat_df_1000_rated.drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_1000_rated_w_one_git_sha,
-                       f'{RATED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
 
         save_df_to_csv(concat_df_10000_fixed,
-                       f'{FIXED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
         concat_df_10000_fixed_w_one_git_sha = concat_df_10000_fixed.drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_10000_fixed_w_one_git_sha,
-                       f'{FIXED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
 
         save_df_to_csv(concat_df_10000_rated,
-                       f'{RATED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
         concat_df_10000_rated_w_one_git_sha = concat_df_10000_rated.drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_10000_rated_w_one_git_sha,
-                       f'{RATED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
+                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
 
     else:
         hunter_df_100_fixed = []
@@ -369,11 +355,7 @@ if __name__ == '__main__':
         types_of_tests = []
         for input_date in nightly_result_dates:
             # Path to the latest test run
-            path_w_date = f'{nightly_result_path}{os.sep}{input_date}'
-
-            # cd into filename with a date-specific test run (path_w_date)
-            cd_into_proj_dir(path_w_date)
-
+            path_w_date = f'{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}'
             path_to_each_test_json = get_paths_to_json(path_w_date)
 
             for test_json_path in path_to_each_test_json:
@@ -421,61 +403,67 @@ if __name__ == '__main__':
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}'
 
                 save_df_to_csv(hunter_df_100_fixed,
-                               f'{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
 
                 hunter_df_100_fixed_w_one_git_sha = hunter_df_100_fixed.drop(
                     FALLOUT_TESTS_COL_NAME, axis=1)
                 save_df_to_csv(
-                    hunter_df_100_fixed_w_one_git_sha, f'{hunter_file_name}{HUNTER_FILE_FMT}')
+                    hunter_df_100_fixed_w_one_git_sha,
+                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
             elif '-rated-100-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}'
 
                 save_df_to_csv(hunter_df_100_rated,
-                               f'{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
 
                 hunter_df_100_rated_w_one_git_sha = hunter_df_100_rated.drop(
                     FALLOUT_TESTS_COL_NAME, axis=1)
                 save_df_to_csv(
-                    hunter_df_100_rated_w_one_git_sha, f'{hunter_file_name}{HUNTER_FILE_FMT}')
+                    hunter_df_100_rated_w_one_git_sha,
+                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
             elif '-fixed-1000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}'
 
                 save_df_to_csv(hunter_df_1000_fixed,
-                               f'{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
 
                 hunter_df_1000_fixed_w_one_git_sha = hunter_df_1000_fixed.drop(
                     FALLOUT_TESTS_COL_NAME, axis=1)
                 save_df_to_csv(
-                    hunter_df_1000_fixed_w_one_git_sha, f'{hunter_file_name}{HUNTER_FILE_FMT}')
+                    hunter_df_1000_fixed_w_one_git_sha,
+                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
             elif '-rated-1000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}'
 
                 save_df_to_csv(hunter_df_1000_rated,
-                               f'{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
 
                 hunter_df_1000_rated_w_one_git_sha = hunter_df_1000_rated.drop(
                     FALLOUT_TESTS_COL_NAME, axis=1)
                 save_df_to_csv(
-                    hunter_df_1000_rated_w_one_git_sha, f'{hunter_file_name}{HUNTER_FILE_FMT}')
+                    hunter_df_1000_rated_w_one_git_sha,
+                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
             elif '-fixed-10000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}'
 
                 save_df_to_csv(hunter_df_10000_fixed,
-                               f'{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
 
                 hunter_df_10000_fixed_w_one_git_sha = hunter_df_10000_fixed.drop(
                     FALLOUT_TESTS_COL_NAME, axis=1)
                 save_df_to_csv(
-                    hunter_df_10000_fixed_w_one_git_sha, f'{hunter_file_name}{HUNTER_FILE_FMT}')
+                    hunter_df_10000_fixed_w_one_git_sha,
+                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
             elif '-rated-10000-' in unique_test_type:
                 hunter_file_name = f'{hunter_prefix}{unique_test_type}'
 
                 save_df_to_csv(hunter_df_10000_rated,
-                               f'{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
 
                 hunter_df_10000_rated_w_one_git_sha = hunter_df_10000_rated.drop(
                     FALLOUT_TESTS_COL_NAME, axis=1)
                 save_df_to_csv(
-                    hunter_df_10000_rated_w_one_git_sha, f'{hunter_file_name}{HUNTER_FILE_FMT}')
+                    hunter_df_10000_rated_w_one_git_sha,
+                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
             else:
                 get_error_log(unique_test_type)

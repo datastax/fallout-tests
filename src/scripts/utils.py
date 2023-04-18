@@ -9,7 +9,6 @@ import subprocess
 from datetime import datetime, timedelta
 from typing import Tuple
 
-import git
 import pandas as pd
 from constants import (CASSANDRA_COL_NAME, CASSANDRA_PROJ_DIR,
                        FALLOUT_TESTS_COL_NAME, FALLOUT_TESTS_PROJ_DIR,
@@ -71,17 +70,6 @@ def add_suffix_to_col(phase_df: pd.DataFrame, phase: str) -> pd.DataFrame:
     return phase_df
 
 
-def cd_into_proj_dir(project_dir: str = HUNTER_CSV_PROJ_DIR) -> None:  # pragma: no cover
-    """
-    Change directory based on input path.
-
-    Args:
-        project_dir: str
-                    The destination directory.
-    """
-    os.chdir(project_dir)
-
-
 def get_commit_hash_cass_fall_tests(
         sorted_date: str = None, is_prospective: bool = PROSPECTIVE_MODE
 ) -> Tuple[str, str]:  # pragma: no cover
@@ -99,28 +87,28 @@ def get_commit_hash_cass_fall_tests(
         A tuple with the Git commit hash of the Apache Cassandra and the DataStax's repos.
     """
     if is_prospective:
-        # cd into cloned Cassandra to then get its latest git SHA
-        cd_into_proj_dir(CASSANDRA_PROJ_DIR)
-        g = git.cmd.Git(CASSANDRA_PROJ_DIR)
-        g.pull('origin', 'trunk')
+        # git pull into cloned Cassandra to then get its latest git SHA
+        subprocess.run(
+            f"git -C {CASSANDRA_PROJ_DIR} pull origin trunk", shell=True
+        )
         cassandra_git_hash = get_git_sha_prospective()
 
-        # cd into cloned fallout-tests to then get its latest git SHA
-        cd_into_proj_dir(FALLOUT_TESTS_PROJ_DIR)
-        g = git.cmd.Git(FALLOUT_TESTS_PROJ_DIR)
-        g.pull('origin', 'main')
+        # git pull into cloned fallout-tests to then get its latest git SHA
+        subprocess.run(
+            f"git -C {FALLOUT_TESTS_PROJ_DIR} pull origin main", shell=True
+        )
         fallout_tests_git_hash = get_git_sha_prospective()
     else:
-        # cd into cloned Cassandra to then get its git SHA corresponding to the date of interest
-        cd_into_proj_dir(CASSANDRA_PROJ_DIR)
-        g = git.cmd.Git(CASSANDRA_PROJ_DIR)
-        g.pull('origin', 'trunk')
+        # git pull into cloned Cassandra to then get its git SHA corresponding to the date of interest
+        subprocess.run(
+            f"git -C {CASSANDRA_PROJ_DIR} pull origin trunk", shell=True
+        )
         cassandra_git_hash = get_git_sha_retrospective(sorted_date)
 
-        # cd into cloned fallout-tests to then get its git SHA corresponding to the date of interest
-        cd_into_proj_dir(FALLOUT_TESTS_PROJ_DIR)
-        g = git.cmd.Git(FALLOUT_TESTS_PROJ_DIR)
-        g.pull('origin', 'main')
+        # git pull into cloned fallout-tests to then get its git SHA corresponding to the date of interest
+        subprocess.run(
+            f"git -C {FALLOUT_TESTS_PROJ_DIR} pull origin main", shell=True
+        )
         fallout_tests_git_hash = get_git_sha_retrospective(sorted_date)
 
     return cassandra_git_hash, fallout_tests_git_hash
