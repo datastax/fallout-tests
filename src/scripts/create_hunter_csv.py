@@ -219,12 +219,10 @@ def get_hunter_df_w_test_type(json_paths: List[str], is_prospective: bool = PROS
     test_type = json_paths[0].split(os.sep)[5]
 
     if test_type != '' and not hunter_df_out.empty:
-
         return hunter_df_out, test_type
 
 
 if __name__ == '__main__':
-
     # cd into nightly_results
     nightly_result_path = NIGHTLY_RESULTS_DIR
     cd_into_proj_dir(nightly_result_path)
@@ -277,7 +275,6 @@ if __name__ == '__main__':
         list_of_hunter_df = []
         list_of_type_of_tests = []
         for test_json_path in path_to_each_test_json:
-
             hunter_df, type_of_test = get_hunter_df_w_test_type(
                 test_json_path, is_case_prospective)
             if type_of_test != '' and not hunter_df.empty:
@@ -362,7 +359,6 @@ if __name__ == '__main__':
         hunter_df_10000_rated = []
         types_of_tests = []
         for input_date in nightly_result_dates:
-
             # Path to the latest test run
             path_w_date = f'{nightly_result_path}{os.sep}{input_date}'
 
@@ -372,7 +368,6 @@ if __name__ == '__main__':
             path_to_each_test_json = get_paths_to_six_json(path_w_date)
 
             for test_json_path in path_to_each_test_json:
-
                 hunter_df, type_of_test = get_hunter_df_w_test_type(
                     test_json_path, is_case_prospective)
 
