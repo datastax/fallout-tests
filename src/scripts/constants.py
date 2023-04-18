@@ -65,3 +65,6 @@ DICT_OF_RENAMED_COLS = {
     LIST_OF_COLS_TO_EXTRACT[9]: 'MAD',
     LIST_OF_COLS_TO_EXTRACT[10]: 'IQR'
 }
+
+# Types of performance tests currently supported
+TUPLE_SUPPORTED_TESTS = ('lwt-')

@@ -18,7 +18,8 @@ from constants import (DICT_OF_RENAMED_COLS, FALLOUT_TESTS_COL_NAME,
                        LWT_TEST_RUN_EXEC_TIME, LWT_TESTS_NAMES,
                        NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
                        RATED_100_CSV_NAME, RATED_1000_CSV_NAME,
-                       RATED_10000_CSV_NAME, TWO_GIT_SHA_SUFFIX)
+                       RATED_10000_CSV_NAME, TUPLE_SUPPORTED_TESTS,
+                       TWO_GIT_SHA_SUFFIX)
 from utils import (add_cols_to_metrics_df, add_suffix_to_col, cd_into_proj_dir,
                    get_commit_hash_cass_fall_tests, get_error_log,
                    get_relevant_dict, get_yesterday_date)
@@ -193,7 +194,9 @@ def generate_hunter_df(json_paths: List[str], is_prospective: bool = PROSPECTIVE
         return hunter_df_full
 
 
-def get_hunter_df_w_test_type(json_paths: List[str], is_prospective: bool = PROSPECTIVE_MODE) -> Tuple[pd.DataFrame, str]:
+def get_hunter_df_w_test_type(
+        json_paths: List[str], is_prospective: bool = PROSPECTIVE_MODE
+) -> Tuple[pd.DataFrame, str]:
     """
     Get the dataframe to feed to hunter with performance results and the corresponding test type (e.g., 100/1000/10000
     partitions and either 'fixed' or 'rated') based on whether the analysis is prospective.
@@ -216,7 +219,12 @@ def get_hunter_df_w_test_type(json_paths: List[str], is_prospective: bool = PROS
         )
         return pd.DataFrame(), ''
 
-    test_type = json_paths[0].split(os.sep)[5]
+    # Get the test type based on a tuple of supported tests (regardless of their positional index)
+    list_of_items_from_json_path = json_paths[0].split(os.sep)
+    test_type = ''
+    for item_in_json in list_of_items_from_json_path:
+        if item_in_json.startswith(TUPLE_SUPPORTED_TESTS):
+            test_type = item_in_json
 
     if test_type != '' and not hunter_df_out.empty:
         return hunter_df_out, test_type
@@ -254,7 +262,8 @@ if __name__ == '__main__':
         test_input_date = nightly_result_dates[-1]
 
         # Separated by _ to be compared wrt 'test_input_date'
-        last_date_from_csv = hunter_df_fixed_100['time'].iloc[-1].split(' ')[0].replace('-', '_')
+        last_date_from_csv = hunter_df_fixed_100['time'].iloc[-1].split(' ')[
+            0].replace('-', '_')
 
         if test_input_date == last_date_from_csv:
             raise ValueError(f"The test results for the date '{test_input_date}' were already run and summarised "
