@@ -87,9 +87,9 @@ def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
     input_df.to_csv(path_to_output, index=False)
 
 
-def get_paths_to_six_json(path_w_spec_date: str) -> List[str]:
+def get_paths_to_json(path_w_spec_date: str) -> List[str]:
     """
-    Get the paths to the six json files of the performance results, i.e., one for each
+    Get the paths to the json files of the performance results, e.g., one for each
     type of performance test (100/1000/10000 partitions, fixed or rated).
 
     Args:
@@ -97,7 +97,7 @@ def get_paths_to_six_json(path_w_spec_date: str) -> List[str]:
                         The test run's date-related path to the json file.
 
     Returns:
-            A list of paths (List[str]) to the six json files of interest.
+            A list of paths (List[str]) to the json files of interest.
     """
 
     # Gets a list of lists of performance-report.json filename for each LWT tests on that given date
@@ -270,7 +270,7 @@ if __name__ == '__main__':
         # cd into filename with a date-specific test run (path_w_date)
         cd_into_proj_dir(path_w_date)
 
-        path_to_each_test_json = get_paths_to_six_json(path_w_date)
+        path_to_each_test_json = get_paths_to_json(path_w_date)
 
         list_of_hunter_df = []
         list_of_type_of_tests = []
@@ -365,7 +365,7 @@ if __name__ == '__main__':
             # cd into filename with a date-specific test run (path_w_date)
             cd_into_proj_dir(path_w_date)
 
-            path_to_each_test_json = get_paths_to_six_json(path_w_date)
+            path_to_each_test_json = get_paths_to_json(path_w_date)
 
             for test_json_path in path_to_each_test_json:
                 hunter_df, type_of_test = get_hunter_df_w_test_type(
