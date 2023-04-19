@@ -25,6 +25,10 @@ FIXED_1000_CSV_NAME = 'hunter-lwt-fixed-1000-partitions'
 RATED_1000_CSV_NAME = 'hunter-lwt-rated-1000-partitions'
 FIXED_10000_CSV_NAME = 'hunter-lwt-fixed-10000-partitions'
 RATED_10000_CSV_NAME = 'hunter-lwt-rated-10000-partitions'
+LIST_OF_CSV_NAMES = [
+    FIXED_100_CSV_NAME, RATED_100_CSV_NAME, FIXED_1000_CSV_NAME,
+    RATED_1000_CSV_NAME, FIXED_10000_CSV_NAME, RATED_10000_CSV_NAME
+]
 
 LWT_TESTS_NAMES = [
     'lwt-fixed-100-partitions', 'lwt-fixed-1000-partitions', 'lwt-fixed-10000-partitions',

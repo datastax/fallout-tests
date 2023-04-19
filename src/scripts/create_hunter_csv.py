@@ -15,8 +15,9 @@ from constants import (DICT_OF_RENAMED_COLS, FALLOUT_TESTS_COL_NAME,
                        FIXED_100_CSV_NAME, FIXED_1000_CSV_NAME,
                        FIXED_10000_CSV_NAME, FMT_Y_D_M, FMT_Y_M_D,
                        HUNTER_CSV_PROJ_DIR, HUNTER_FILE_FMT,
-                       LIST_OF_COLS_TO_EXTRACT, LWT_TEST_RUN_EXEC_TIME,
-                       LWT_TESTS_NAMES, NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
+                       LIST_OF_COLS_TO_EXTRACT, LIST_OF_CSV_NAMES,
+                       LWT_TEST_RUN_EXEC_TIME, LWT_TESTS_NAMES,
+                       NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
                        RATED_100_CSV_NAME, RATED_1000_CSV_NAME,
                        RATED_10000_CSV_NAME, TUPLE_SUPPORTED_TESTS,
                        TWO_GIT_SHA_SUFFIX)
@@ -235,18 +236,14 @@ if __name__ == '__main__':
     # Set to False if running this for the first time, then re-run and set to True.
     is_case_prospective = PROSPECTIVE_MODE
     if is_case_prospective:
-        hunter_df_fixed_100 = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
-        hunter_df_rated_100 = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{HUNTER_FILE_FMT}')
-        hunter_df_fixed_1000 = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
-        hunter_df_rated_1000 = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
-        hunter_df_fixed_10000 = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
-        hunter_df_rated_10000 = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
+        csv_file_paths = []
+        for csv_file_name in LIST_OF_CSV_NAMES:
+            csv_file_paths.append(
+                f'{HUNTER_CSV_PROJ_DIR}{os.sep}{csv_file_name}{HUNTER_FILE_FMT}')
+
+        hunter_df_fixed_100, hunter_df_rated_100, hunter_df_fixed_1000, \
+            hunter_df_rated_1000, hunter_df_fixed_10000, hunter_df_rated_10000 = \
+            (pd.read_csv(csv_file_path) for csv_file_path in csv_file_paths)
 
         # Get date from the latest test run
         test_input_date = nightly_result_dates[-1]
