@@ -273,71 +273,64 @@ if __name__ == '__main__':
                 list_of_hunter_df.append(hunter_df)
                 list_of_type_of_tests.append(type_of_test)
 
-        counter = 0
-        for type_of_test in list_of_type_of_tests:
-            if '-fixed-100-' in type_of_test:
-                concat_df_100_fixed = pd.concat(
-                    [hunter_df_fixed_100, list_of_hunter_df[counter]])
-            elif '-rated-100-' in type_of_test:
-                concat_df_100_rated = pd.concat(
-                    [hunter_df_rated_100, list_of_hunter_df[counter]])
-            elif '-fixed-1000-' in type_of_test:
-                concat_df_1000_fixed = pd.concat(
-                    [hunter_df_fixed_1000, list_of_hunter_df[counter]])
-            elif '-rated-1000-' in type_of_test:
-                concat_df_1000_rated = pd.concat(
-                    [hunter_df_rated_1000, list_of_hunter_df[counter]])
-            elif '-fixed-10000-' in type_of_test:
-                concat_df_10000_fixed = pd.concat(
-                    [hunter_df_fixed_10000, list_of_hunter_df[counter]])
-            elif '-rated-10000-' in type_of_test:
-                concat_df_10000_rated = pd.concat(
-                    [hunter_df_rated_10000, list_of_hunter_df[counter]])
-            else:
-                get_error_log(type_of_test)
+        concat_hunter_data_frames = {
+            '-fixed-100-': hunter_df_fixed_100,
+            '-rated-100-': hunter_df_rated_100,
+            '-fixed-1000-': hunter_df_fixed_1000,
+            '-rated-1000-': hunter_df_rated_1000,
+            '-fixed-10000-': hunter_df_fixed_10000,
+            '-rated-10000-': hunter_df_rated_10000
+        }
 
-            counter += 1
+        for i, test_type in enumerate(list_of_type_of_tests):
+            for test_partition, hunter_df in concat_hunter_data_frames.items():
+                if test_partition in test_type:
+                    concat_df = pd.concat([hunter_df, list_of_hunter_df[i]])
+                    concat_hunter_data_frames[test_partition] = concat_df
+                    break
+                else:
+                    get_error_log(test_type)
 
         # Save two versions of the df: 1) with the Cassandra git shas only (for hunter), 2) with two git shas (of the
         # Cassandra and fallout-tests repos) for auditability
-        save_df_to_csv(concat_df_100_fixed,
+        save_df_to_csv(concat_hunter_data_frames['-fixed-100-'],
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_100_fixed_w_one_git_sha = concat_df_100_fixed.drop(
+        concat_df_100_fixed_w_one_git_sha = concat_hunter_data_frames['-fixed-100-'].drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_100_fixed_w_one_git_sha,
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
 
-        save_df_to_csv(concat_df_100_rated,
+        save_df_to_csv(concat_hunter_data_frames['-rated-100-'],
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_100_rated_w_one_git_sha = concat_df_100_rated.drop(
+        concat_df_100_rated_w_one_git_sha = concat_hunter_data_frames['-rated-100-'].drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_100_rated_w_one_git_sha,
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{HUNTER_FILE_FMT}')
 
-        save_df_to_csv(concat_df_1000_fixed,
+        save_df_to_csv(concat_hunter_data_frames['-fixed-1000-'],
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_1000_fixed_w_one_git_sha = concat_df_1000_fixed.drop(
+        concat_df_1000_fixed_w_one_git_sha = concat_hunter_data_frames['-fixed-1000-'].drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_1000_fixed_w_one_git_sha,
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
 
-        save_df_to_csv(concat_df_1000_rated,
+        save_df_to_csv(concat_hunter_data_frames['-rated-1000-'],
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_1000_rated_w_one_git_sha = concat_df_1000_rated.drop(
+        concat_df_1000_rated_w_one_git_sha = concat_hunter_data_frames['-rated-1000-'].drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_1000_rated_w_one_git_sha,
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
 
-        save_df_to_csv(concat_df_10000_fixed,
+        save_df_to_csv(concat_hunter_data_frames['-fixed-10000-'],
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_10000_fixed_w_one_git_sha = concat_df_10000_fixed.drop(
+        concat_df_10000_fixed_w_one_git_sha = concat_hunter_data_frames['-fixed-10000-'].drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_10000_fixed_w_one_git_sha,
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
 
-        save_df_to_csv(concat_df_10000_rated,
+        save_df_to_csv(concat_hunter_data_frames['-rated-10000-'],
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_10000_rated_w_one_git_sha = concat_df_10000_rated.drop(
+        concat_df_10000_rated_w_one_git_sha = concat_hunter_data_frames['-rated-10000-'].drop(
             FALLOUT_TESTS_COL_NAME, axis=1)
         save_df_to_csv(concat_df_10000_rated_w_one_git_sha,
                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
