@@ -10,5 +10,3 @@ dependencies:
   - autopep8
   - isort
   - pip
-  - pip:
-      - freezegun==1.2.2

@@ -3,18 +3,14 @@ This Python file hosts utility-based functions used to support the
 creation of a csv for Hunter.
 """
 
+import glob
 import logging
 import os
-import subprocess
-from datetime import datetime, timedelta
-from typing import Tuple
 
 import pandas as pd
-from constants import (CASSANDRA_COL_NAME, CASSANDRA_PROJ_DIR,
-                       FALLOUT_TESTS_COL_NAME, FALLOUT_TESTS_PROJ_DIR,
-                       FIXED_100_CSV_NAME, FMT_TIME, FMT_Y_D_M, FMT_Y_M_D,
-                       HUNTER_CSV_PROJ_DIR, HUNTER_FILE_FMT,
-                       LWT_TEST_RUN_EXEC_TIME, PROSPECTIVE_MODE)
+from constants import (CASSANDRA_COL_NAME, FALLOUT_TESTS_COL_NAME,
+                       FALLOUT_TESTS_SHA_PROJ_DIR, LWT_TESTS_NAMES,
+                       NIGHTLY_RESULTS_DIR)
 
 
 def add_cols_to_metrics_df(
@@ -70,224 +66,74 @@ def add_suffix_to_col(phase_df: pd.DataFrame, phase: str) -> pd.DataFrame:
     return phase_df
 
 
-def get_commit_hash_cass_fall_tests(
-        sorted_date: str = None, is_prospective: bool = PROSPECTIVE_MODE
-) -> Tuple[str, str]:  # pragma: no cover
+def get_git_sha_for_cassandra(input_date: str) -> str:
     """
-    Get the Git commit hash of the Apache Cassandra and the DataStax's repos given a date and
-    whether the analysis is prospective.
+    Get the Git sha of the Cassandra repo for a given date from a logs.txt file.
 
     Args:
-        sorted_date: str
-                    A sorted date in the format as per the constant FMT_Y_D_M.
-        is_prospective: bool
-                    Whether the analysis is prospective (True by default).
+        input_date: str
+                    A date for which to get a Git sha of the Cassandra repo.
 
     Returns:
-        A tuple with the Git commit hash of the Apache Cassandra and the DataStax's repos.
+            The Git sha (str) of the Cassandra repo for a given date.
     """
-    if is_prospective:
-        # git pull into cloned Cassandra to then get its latest git SHA
-        subprocess.run(
-            f"git -C {CASSANDRA_PROJ_DIR} pull origin trunk", shell=True
+
+    log_files_list = []
+    list_of_log_file_path = []
+    for _ in LWT_TESTS_NAMES:
+        log_files_list = glob.glob(
+            f"{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}{os.sep}{'**/performance-tester-dc1-default-sts-0/logs.txt'}",
+            recursive=True
         )
-        cassandra_git_hash = get_git_sha_prospective()
+        for log_file_path in log_files_list:
+            list_of_log_file_path.append(log_file_path)
 
-        # git pull into cloned fallout-tests to then get its latest git SHA
-        subprocess.run(
-            f"git -C {FALLOUT_TESTS_PROJ_DIR} pull origin main", shell=True
-        )
-        fallout_tests_git_hash = get_git_sha_prospective()
-    else:
-        # git pull into cloned Cassandra to then get its git SHA corresponding to the date of interest
-        subprocess.run(
-            f"git -C {CASSANDRA_PROJ_DIR} pull origin trunk", shell=True
-        )
-        cassandra_git_hash = get_git_sha_retrospective(sorted_date)
+    git_sha_list = []
+    for logs in log_files_list:
+        with open(logs, 'r') as text:
+            content = ' '.join(text.readlines())
+            git_sha = content.split('Git SHA: ')[1].split('\n')[0]
+            git_sha_list.append(git_sha)
 
-        # git pull into cloned fallout-tests to then get its git SHA corresponding to the date of interest
-        subprocess.run(
-            f"git -C {FALLOUT_TESTS_PROJ_DIR} pull origin main", shell=True
-        )
-        fallout_tests_git_hash = get_git_sha_retrospective(sorted_date)
-
-    return cassandra_git_hash, fallout_tests_git_hash
+    # Get the first non-empty Git sha as the final one, as at times one subtest may not yield results, whilst
+    # another one (or all others) may.
+    final_cass_sha = ''
+    for i in range(len(git_sha_list)):
+        if git_sha_list[i] != '':
+            final_cass_sha = git_sha_list[i]
+            break
+    return final_cass_sha
 
 
-def get_git_sha_prospective(date_fmt: str = FMT_Y_D_M) -> str:  # pragma: no cover
+def get_git_sha_for_fallout_tests(input_date: str) -> str:
     """
-    Return the Git short hash of a repo given a specific date.
+    Get the Git sha of the fallout-tests repo for a given date from a fallout-tests_git_sha.log file.
 
     Args:
-        date_fmt: str
-                 The chosen date format.
+        input_date: str
+                    A date for which to get a Git sha of the fallout-tests repo.
 
     Returns:
-            The Git short hash of the repo of interest (based on the current working directory).
-
-    Note:
-        This assumes that the current working directory is where the repo of interest was cloned. If not, cd into it
-        before executing this function.
+            The Git sha (str) of the fallout-tests repo for a given date.
     """
 
-    today_date = datetime.today()
-    logging.debug("Retrieving Git sha for today's date: ", today_date)
-
-    yesterday_s_date = get_yesterday_date(date_fmt)
-    two_days_ago = (today_date - timedelta(days=2)).strftime(date_fmt)
-
-    gitsha = subprocess.check_output(
-        f"git log --since={yesterday_s_date} --pretty=format:'%h %ci' -1", shell=True
-    ).decode('ascii').strip()
-    if gitsha == '':
-        logging.warning(f'No commit was found for the date {yesterday_s_date}; '
-                        f'so, the latest commit for the previous day is taken.')
-        # The line below gets the commit hash for yesterday.
-        gitsha = subprocess.check_output(
-            f"git log --since={two_days_ago} --pretty=format:'%h %ci' -1", shell=True
-        ).decode('ascii').strip()
-        logging.info(f"The git commit '{gitsha}' from yesterday was taken.")
-    else:
-        logging.info(f"Today's latest commit was found.")
-    split_gitsha = gitsha.split()
-
-    # The Git SHAs are already sorted from the most to the least recent, thus getting the
-    # first item from the list (expecting the hash as the first element based on the
-    # --pretty=format:'%h %ci'" above).
-    if len(split_gitsha) > 0:
-        final_sha = split_gitsha[0]
-        logging.debug(
-            f"Retrieved Git sha {final_sha} for today's date '{today_date}'.")
-        return final_sha
-    # If len == 0, get the latest Git sha from the last row in the previous csv file (any test types as Git shas are the
-    # same regardless of them).
-    else:
-        df_retrospective = pd.read_csv(
-            f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
-        # Get current working directory ('pwd' in bash)
-        cwd = os.getcwd()
-        latest_git_sha = ''
-        if cwd == CASSANDRA_PROJ_DIR:
-            latest_git_sha = df_retrospective[CASSANDRA_COL_NAME].iloc[-1]
-        elif cwd == FALLOUT_TESTS_PROJ_DIR:
-            latest_git_sha = df_retrospective[FALLOUT_TESTS_COL_NAME].iloc[-1]
-        else:
-            logging.error(f"The directory '{cwd} is not one of the two expected Git repos ('{CASSANDRA_PROJ_DIR}' or "
-                          f"{FALLOUT_TESTS_PROJ_DIR}). Please provide either one or the other, and retry.")
-        return latest_git_sha
-
-
-def get_git_sha_retrospective(given_date: str) -> str:  # pragma: no cover
-    """
-    Return the Git short hash of a repo given a specific date but on or before 11pm UTC (the time of the run on the VM).
-    If no commits were found for a given date, the Git sha of the latest commit would be taken.
-
-    Args:
-        given_date: str
-                    The date of the day beyond that of the current test run (to be able to get the current
-                    test run's date).
-
-    Returns:
-            The Git short hash of the repo of interest (based on the current working directory).
-
-    Note:
-        This assumes that the current working directory is where the repo of interest was cloned. If not, cd into it
-        before executing this function.
-    """
-
-    logging.debug('Retrieving Git sha for the date: ', given_date)
-
-    given_date_list = given_date.split('_')
-
-    # Y-M-D for git compatibility with VM
-    given_date_formatted = datetime(
-        int(given_date_list[0]), int(
-            given_date_list[2]), int(given_date_list[1])
+    fallout_tests_log_file_list = glob.glob(
+        f"{FALLOUT_TESTS_SHA_PROJ_DIR}{os.sep}{input_date}{os.sep}{'fallout-tests_git_sha.log'}",
+        recursive=True
     )
 
-    gitsha_until = subprocess.check_output(
-        f"git log --until='{given_date_formatted}' --pretty=format:'%h %ci'", shell=True
-    ).decode('ascii').strip()
-    gitsha_until_w_commas = gitsha_until.replace('\n', ',').replace(' ', ',')
-    gitsha_until_list = gitsha_until_w_commas.split(',')
+    if len(fallout_tests_log_file_list) == 0:
+        logging.error(
+            "The 'fallout_tests_log_file_list' is empty; "
+            "thus, an empty string (instead of the fallout-tests Git sha) is being returned."
+        )
+        return ''
 
-    gitsha_local = subprocess.check_output(
-        f"git log --until='{given_date_formatted}' --pretty=format:'%h %cd' --date=local",
-        shell=True
-    ).decode('ascii').strip()
-    gitsha_local_w_commas = gitsha_local.replace('\n', ',').replace(' ', ',')
-    gitsha_local_list = gitsha_local_w_commas.split(',')
-
-    # Remove time zones (e.g., '-0700') from the list 'gitsha_until_list'
-    counter_until = 0
-    for _ in gitsha_until_list:
-        while counter_until < len(gitsha_until_list) - 3:
-            counter_until += 3
-            gitsha_until_list.pop(counter_until)
-
-    # Get list of local times from the list 'gitsha_local_list'
-    counter_local = 0
-    list_of_local_times = []
-    counter_loop = 0
-    for _ in gitsha_local_list:
-        while counter_local < len(gitsha_local_list) - 4:
-            if counter_loop < 1:
-                counter_local += 4
-            else:
-                counter_local += 6
-            list_of_local_times.append(gitsha_local_list[counter_local])
-            counter_loop += 1
-
-    # Replace previous time in the list 'gitsha_until_list' (without time zone as popped/removed above) with
-    # the correct local time extracted in the list 'list_of_local_times' above
-    counter_loop = 0
-    counter_until_replace = 0
-    for local_time in list_of_local_times:
-        if counter_loop < 1:
-            counter_until_replace += 2
-            gitsha_until_list[counter_until_replace] = local_time
-            counter_until_replace += 3
-        else:
-            gitsha_until_list[counter_until_replace] = local_time
-            counter_until_replace += 3
-        counter_loop += 1
-
-    # Get the final git sha
-    counter_date = 0
-    for _ in gitsha_until_list:
-        while not counter_date == len(gitsha_until_list) - 1:
-            counter_date += 1
-            if given_date == gitsha_until_list[counter_date]:
-                corresp_time = gitsha_until_list[counter_date + 1]
-                # Get git sha of the same date but on or before 11pm UTC
-                if datetime.strptime(corresp_time, FMT_TIME) <= datetime.strptime(LWT_TEST_RUN_EXEC_TIME, FMT_TIME):
-                    corresp_git_sha = gitsha_until_list[counter_date - 1]
-                    logging.debug(
-                        f"The Git commit sha {corresp_git_sha} was retrieved for the date '{given_date}'."
-                    )
-                    return corresp_git_sha
-                # As the time is after 11pm UTC, get git sha of the same date but before 11pm UTC
-                else:
-                    while not counter_date == len(gitsha_until_list) - 3:
-                        counter_date += 3
-                        if given_date == gitsha_until_list[counter_date]:
-                            corresp_time = gitsha_until_list[counter_date + 1]
-                            if datetime.strptime(corresp_time, FMT_TIME) <= datetime.strptime(
-                                    LWT_TEST_RUN_EXEC_TIME, FMT_TIME
-                            ):
-                                corresp_git_sha = gitsha_until_list[counter_date - 1]
-                                logging.debug(
-                                    f"The Git commit sha {corresp_git_sha} was retrieved for the date '{given_date}'."
-                                )
-                                return corresp_git_sha
-            # Get the latest git sha (of a different/previous date)
-            else:
-                corresp_git_sha = gitsha_until_list[counter_date - 1]
-                logging.debug(
-                    f"No commits were found for the date '{given_date}'. "
-                    f"Thus, the latest Git commit sha {corresp_git_sha} was retrieved."
-                )
-                return corresp_git_sha
+    with open(fallout_tests_log_file_list[0], 'r') as text:
+        content = ' '.join(text.readlines())
+        # The 1st element is the Git sha, the 2nd is the datetime
+        final_fallout_tests_sha = content.split(',')[0]
+    return final_fallout_tests_sha
 
 
 def get_error_log(test_type: str) -> None:  # pragma: no cover
@@ -317,16 +163,15 @@ def get_relevant_dict(dict_of_dicts: dict, test_phase: str) -> dict:
     return relevant_dict
 
 
-def get_yesterday_date(date_fmt: str = FMT_Y_M_D) -> str:
+def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
     """
-    Get yesterday's date in a chosen format.
+    Save an input dataframe to a csv file in a chosen filename.
 
     Args:
-        date_fmt: str
-                The chosen date format.
-
-    Returns:
-            Yesterday's date (str) in the chosen format.
+        input_df: pd.DataFrame
+                An input dataframe.
+        path_to_output: str
+                The filename where to save the input dataframe.
     """
-    yesterday_date = (datetime.today() - timedelta(days=1)).strftime(date_fmt)
-    return yesterday_date
+
+    input_df.to_csv(path_to_output, index=False)

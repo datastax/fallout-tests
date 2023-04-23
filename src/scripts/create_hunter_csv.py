@@ -7,23 +7,20 @@ import glob
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+import re
 from typing import List, Tuple
 
 import pandas as pd
-from constants import (DICT_OF_RENAMED_COLS, FALLOUT_TESTS_COL_NAME,
-                       FIXED_100_CSV_NAME, FIXED_1000_CSV_NAME,
-                       FIXED_10000_CSV_NAME, FMT_Y_D_M, FMT_Y_M_D,
-                       HUNTER_CSV_PROJ_DIR, HUNTER_FILE_FMT,
-                       LIST_OF_COLS_TO_EXTRACT, LIST_OF_CSV_NAMES,
-                       LWT_TEST_RUN_EXEC_TIME, LWT_TESTS_NAMES,
-                       NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
-                       RATED_100_CSV_NAME, RATED_1000_CSV_NAME,
-                       RATED_10000_CSV_NAME, TUPLE_SUPPORTED_TESTS,
+from constants import (DATE_DIR_REGEX_PATTERN, DICT_OF_RENAMED_COLS,
+                       FALLOUT_TESTS_COL_NAME, HUNTER_CSV_PROJ_DIR,
+                       HUNTER_FILE_FMT, HUNTER_PREFIX, LIST_OF_COLS_TO_EXTRACT,
+                       LIST_OF_CSV_NAMES, LWT_TEST_RUN_EXEC_TIME,
+                       LWT_TESTS_NAMES, NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
+                       SUBSTR_TESTS_NAMES, TUPLE_SUPPORTED_TESTS,
                        TWO_GIT_SHA_SUFFIX)
-from utils import (add_cols_to_metrics_df, add_suffix_to_col,
-                   get_commit_hash_cass_fall_tests, get_error_log,
-                   get_relevant_dict, get_yesterday_date)
+from utils import (add_cols_to_metrics_df, add_suffix_to_col, get_error_log,
+                   get_git_sha_for_cassandra, get_git_sha_for_fallout_tests,
+                   get_relevant_dict, save_df_to_csv)
 
 
 def extract_metrics_df(read_rel_dict: dict, write_rel_dict: dict) -> pd.DataFrame:
@@ -75,21 +72,7 @@ def create_hunter_df(combined_columns_df: pd.DataFrame) -> pd.DataFrame:
     return horiz_concat_df_one_blended_row
 
 
-def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
-    """
-    Save an input dataframe to a csv file in a chosen filename.
-
-    Args:
-        input_df: pd.DataFrame
-                An input dataframe.
-        path_to_output: str
-                The filename where to save the input dataframe.
-    """
-
-    input_df.to_csv(path_to_output, index=False)
-
-
-def get_paths_to_json(path_w_spec_date: str) -> List[str]:
+def get_paths_to_json(path_w_spec_date: str) -> List[List[str]]:
     """
     Get the paths to the json files of the performance results, e.g., one for each
     type of performance test (100/1000/10000 partitions, fixed or rated).
@@ -106,7 +89,7 @@ def get_paths_to_json(path_w_spec_date: str) -> List[str]:
     paths_to_each_json = []
     for lwt_test in LWT_TESTS_NAMES:
         each_json_paths_list = glob.glob(
-            f"{path_w_spec_date}{os.sep}{lwt_test}/{'**/performance-report.json'}",
+            f"{path_w_spec_date}{os.sep}{lwt_test}{os.sep}{'**/performance-report.json'}",
             recursive=True
         )
         paths_to_each_json.append(each_json_paths_list)
@@ -114,16 +97,14 @@ def get_paths_to_json(path_w_spec_date: str) -> List[str]:
     return paths_to_each_json
 
 
-def generate_hunter_df(json_paths: List[str], is_prospective: bool = PROSPECTIVE_MODE) -> pd.DataFrame:
+def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:
     """
     Generate the dataframe of test type-specific performance results and the
-    corresponding csv file to be fed to hunter based on whether the analysis is prospective.
+    corresponding csv file to be fed to hunter.
 
     Args:
         json_paths: List[str]
                     A list of json paths with performance results and related metrics.
-        is_prospective: bool
-                    Whether the analysis is prospective (True by default).
 
     Returns:
             A dataframe of test type-specific performance results.
@@ -157,29 +138,21 @@ def generate_hunter_df(json_paths: List[str], is_prospective: bool = PROSPECTIVE
             if col_name not in ['totalOps', 'opRate']:
                 raw_hunter_metrics_df[col_name] = raw_hunter_metrics_df[col_name].str.rstrip(
                     ' ms')
-        # Get date based on path and add time for compatibility with hunter.
-        date_val = json_paths[0].split(os.sep)[4]
+        # Get date from the json path (regardless of its positional index) and add time for compatibility with hunter.
+        list_of_items_from_json_path = json_paths[0].split(os.sep)
+
+        date_val = ''
+        for item_in_json in list_of_items_from_json_path:
+            matched_pattern = re.search(DATE_DIR_REGEX_PATTERN, item_in_json)
+            if matched_pattern:
+                date_val = matched_pattern.group()
+
         # As at 11pm UTC
         date_val_w_time = f"{date_val.replace('_', '-')}{' '}{LWT_TEST_RUN_EXEC_TIME}{' +0000'}"
 
-        # Prospective case is when running hunter nightly; retrospective is when running it
-        # on already output dates-related folders of performance results (one-off analysis).
-        if is_prospective:
-            cassandra_git_short_hash, fallout_tests_git_short_hash = \
-                get_commit_hash_cass_fall_tests(is_prospective=is_prospective)
-
-        else:
-            # Swap month and day to match expected format for the git log command below
-            list_of_elems = date_val.split('_')
-            # Plus one day to then get the date's Git sha (as using 'until' in git log command)
-            date_sorted = datetime(
-                int(list_of_elems[0]), int(
-                    list_of_elems[1]), int(list_of_elems[2])
-            ) + timedelta(days=1)
-            date_sorted_y_d_m = date_sorted.strftime(FMT_Y_D_M)
-            cassandra_git_short_hash, fallout_tests_git_short_hash = \
-                get_commit_hash_cass_fall_tests(
-                    date_sorted_y_d_m, is_prospective)
+        # Get the Git shas for the Cassandra and fallout-tests repos for auditability
+        cassandra_git_short_hash = get_git_sha_for_cassandra(date_val)
+        fallout_tests_git_short_hash = get_git_sha_for_fallout_tests(date_val)
 
         combined_read_write_df = create_hunter_df(raw_hunter_metrics_df)
 
@@ -192,23 +165,19 @@ def generate_hunter_df(json_paths: List[str], is_prospective: bool = PROSPECTIVE
         return hunter_df_full
 
 
-def get_hunter_df_w_test_type(
-        json_paths: List[str], is_prospective: bool = PROSPECTIVE_MODE
-) -> Tuple[pd.DataFrame, str]:
+def get_hunter_df_w_test_type(json_paths: List[str]) -> Tuple[pd.DataFrame, str]:
     """
     Get the dataframe to feed to hunter with performance results and the corresponding test type (e.g., 100/1000/10000
-    partitions and either 'fixed' or 'rated') based on whether the analysis is prospective.
+    partitions and either 'fixed' or 'rated').
 
     Args:
         json_paths: List[str]
                     A list of json paths with performance results and related metrics.
-        is_prospective: bool
-                    Whether the analysis is prospective (True by default).
 
     Returns:
             A tuple with the dataframe with performance results and the corresponding test type.
     """
-    hunter_df_out = generate_hunter_df(json_paths, is_prospective)
+    hunter_df_out = generate_hunter_df(json_paths)
 
     if len(json_paths) == 0 or hunter_df_out.empty:
         logging.error(
@@ -219,13 +188,13 @@ def get_hunter_df_w_test_type(
 
     # Get the test type based on a tuple of supported tests (regardless of their positional index)
     list_of_items_from_json_path = json_paths[0].split(os.sep)
-    test_type = ''
+    test_type_str = ''
     for item_in_json in list_of_items_from_json_path:
         if item_in_json.startswith(TUPLE_SUPPORTED_TESTS):
-            test_type = item_in_json
+            test_type_str = item_in_json
 
-    if test_type != '' and not hunter_df_out.empty:
-        return hunter_df_out, test_type
+    if test_type_str != '' and not hunter_df_out.empty:
+        return hunter_df_out, test_type_str
 
 
 if __name__ == '__main__':
@@ -258,8 +227,6 @@ if __name__ == '__main__':
                              f"past the latest date in the csv file.")
         type_of_test = type(test_input_date)
 
-        yesterday_s_date = get_yesterday_date(FMT_Y_M_D)
-
         # Get path to the latest test run
         path_w_date = f'{NIGHTLY_RESULTS_DIR}{os.sep}{test_input_date}'
         path_to_each_test_json = get_paths_to_json(path_w_date)
@@ -267,19 +234,19 @@ if __name__ == '__main__':
         list_of_hunter_df = []
         list_of_type_of_tests = []
         for test_json_path in path_to_each_test_json:
-            hunter_df, type_of_test = get_hunter_df_w_test_type(
-                test_json_path, is_case_prospective)
+            hunter_df, type_of_test = get_hunter_df_w_test_type(test_json_path)
             if type_of_test != '' and not hunter_df.empty:
                 list_of_hunter_df.append(hunter_df)
                 list_of_type_of_tests.append(type_of_test)
 
+        # Get concatenated hunter dfs across all test types currently supported
         concat_hunter_data_frames = {
-            '-fixed-100-': hunter_df_fixed_100,
-            '-rated-100-': hunter_df_rated_100,
-            '-fixed-1000-': hunter_df_fixed_1000,
-            '-rated-1000-': hunter_df_rated_1000,
-            '-fixed-10000-': hunter_df_fixed_10000,
-            '-rated-10000-': hunter_df_rated_10000
+            SUBSTR_TESTS_NAMES[0]: hunter_df_fixed_100,
+            SUBSTR_TESTS_NAMES[1]: hunter_df_rated_100,
+            SUBSTR_TESTS_NAMES[2]: hunter_df_fixed_1000,
+            SUBSTR_TESTS_NAMES[3]: hunter_df_rated_1000,
+            SUBSTR_TESTS_NAMES[4]: hunter_df_fixed_10000,
+            SUBSTR_TESTS_NAMES[5]: hunter_df_rated_10000
         }
 
         for i, test_type in enumerate(list_of_type_of_tests):
@@ -293,167 +260,73 @@ if __name__ == '__main__':
 
         # Save two versions of the df: 1) with the Cassandra git shas only (for hunter), 2) with two git shas (of the
         # Cassandra and fallout-tests repos) for auditability
-        save_df_to_csv(concat_hunter_data_frames['-fixed-100-'],
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_100_fixed_w_one_git_sha = concat_hunter_data_frames['-fixed-100-'].drop(
-            FALLOUT_TESTS_COL_NAME, axis=1)
-        save_df_to_csv(concat_df_100_fixed_w_one_git_sha,
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_100_CSV_NAME}{HUNTER_FILE_FMT}')
-
-        save_df_to_csv(concat_hunter_data_frames['-rated-100-'],
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_100_rated_w_one_git_sha = concat_hunter_data_frames['-rated-100-'].drop(
-            FALLOUT_TESTS_COL_NAME, axis=1)
-        save_df_to_csv(concat_df_100_rated_w_one_git_sha,
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_100_CSV_NAME}{HUNTER_FILE_FMT}')
-
-        save_df_to_csv(concat_hunter_data_frames['-fixed-1000-'],
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_1000_fixed_w_one_git_sha = concat_hunter_data_frames['-fixed-1000-'].drop(
-            FALLOUT_TESTS_COL_NAME, axis=1)
-        save_df_to_csv(concat_df_1000_fixed_w_one_git_sha,
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
-
-        save_df_to_csv(concat_hunter_data_frames['-rated-1000-'],
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_1000_rated_w_one_git_sha = concat_hunter_data_frames['-rated-1000-'].drop(
-            FALLOUT_TESTS_COL_NAME, axis=1)
-        save_df_to_csv(concat_df_1000_rated_w_one_git_sha,
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_1000_CSV_NAME}{HUNTER_FILE_FMT}')
-
-        save_df_to_csv(concat_hunter_data_frames['-fixed-10000-'],
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_10000_fixed_w_one_git_sha = concat_hunter_data_frames['-fixed-10000-'].drop(
-            FALLOUT_TESTS_COL_NAME, axis=1)
-        save_df_to_csv(concat_df_10000_fixed_w_one_git_sha,
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{FIXED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
-
-        save_df_to_csv(concat_hunter_data_frames['-rated-10000-'],
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-        concat_df_10000_rated_w_one_git_sha = concat_hunter_data_frames['-rated-10000-'].drop(
-            FALLOUT_TESTS_COL_NAME, axis=1)
-        save_df_to_csv(concat_df_10000_rated_w_one_git_sha,
-                       f'{HUNTER_CSV_PROJ_DIR}{os.sep}{RATED_10000_CSV_NAME}{HUNTER_FILE_FMT}')
+        for i, test_name in enumerate(LWT_TESTS_NAMES):
+            for substr_test_name in SUBSTR_TESTS_NAMES:
+                if substr_test_name in test_name:
+                    df_w_two_git_sha = concat_hunter_data_frames[substr_test_name]
+                    save_df_to_csv(
+                        df_w_two_git_sha,
+                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{HUNTER_PREFIX}{test_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}'
+                    )
+                    df_w_one_git_sha = df_w_two_git_sha.drop(
+                        FALLOUT_TESTS_COL_NAME, axis=1)
+                    save_df_to_csv(
+                        df_w_one_git_sha,
+                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{HUNTER_PREFIX}{test_name}{HUNTER_FILE_FMT}'
+                    )
 
     else:
-        hunter_df_100_fixed = []
-        hunter_df_100_rated = []
-        hunter_df_1000_fixed = []
-        hunter_df_1000_rated = []
-        hunter_df_10000_fixed = []
-        hunter_df_10000_rated = []
-        types_of_tests = []
+        hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated, hunter_df_10000_fixed, \
+            hunter_df_10000_rated, types_of_tests = [], [], [], [], [], [], []
         for input_date in nightly_result_dates:
-            # Path to the latest test run
-            path_w_date = f'{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}'
-            path_to_each_test_json = get_paths_to_json(path_w_date)
-
-            for test_json_path in path_to_each_test_json:
+            for test_json_path in get_paths_to_json(f'{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}'):
                 hunter_df, type_of_test = get_hunter_df_w_test_type(
-                    test_json_path, is_case_prospective)
-
-                if type_of_test != '':
+                    test_json_path)
+                if type_of_test:
                     types_of_tests.append(type_of_test)
-
-                if '-fixed-100-' in type_of_test:
-                    if not hunter_df.empty:
-                        hunter_df_100_fixed.append(hunter_df)
-                elif '-rated-100-' in type_of_test:
-                    if not hunter_df.empty:
-                        hunter_df_100_rated.append(hunter_df)
-                elif '-fixed-1000-' in type_of_test:
-                    if not hunter_df.empty:
-                        hunter_df_1000_fixed.append(hunter_df)
-                elif '-rated-1000-' in type_of_test:
-                    if not hunter_df.empty:
-                        hunter_df_1000_rated.append(hunter_df)
-                elif '-fixed-10000-' in type_of_test:
-                    if not hunter_df.empty:
-                        hunter_df_10000_fixed.append(hunter_df)
-                elif '-rated-10000-' in type_of_test:
-                    if not hunter_df.empty:
-                        hunter_df_10000_rated.append(hunter_df)
+                if SUBSTR_TESTS_NAMES[0] in type_of_test and not hunter_df.empty:
+                    hunter_df_100_fixed.append(hunter_df)
+                elif SUBSTR_TESTS_NAMES[1] in type_of_test and not hunter_df.empty:
+                    hunter_df_100_rated.append(hunter_df)
+                elif SUBSTR_TESTS_NAMES[2] in type_of_test and not hunter_df.empty:
+                    hunter_df_1000_fixed.append(hunter_df)
+                elif SUBSTR_TESTS_NAMES[3] in type_of_test and not hunter_df.empty:
+                    hunter_df_1000_rated.append(hunter_df)
+                elif SUBSTR_TESTS_NAMES[4] in type_of_test and not hunter_df.empty:
+                    hunter_df_10000_fixed.append(hunter_df)
+                elif SUBSTR_TESTS_NAMES[5] in type_of_test and not hunter_df.empty:
+                    hunter_df_10000_rated.append(hunter_df)
                 else:
                     get_error_log(type_of_test)
 
-        hunter_df_100_fixed = pd.concat(hunter_df_100_fixed)
-        hunter_df_100_rated = pd.concat(hunter_df_100_rated)
-        hunter_df_1000_fixed = pd.concat(hunter_df_1000_fixed)
-        hunter_df_1000_rated = pd.concat(hunter_df_1000_rated)
-        hunter_df_10000_fixed = pd.concat(hunter_df_10000_fixed)
-        hunter_df_10000_rated = pd.concat(hunter_df_10000_rated)
-
-        unique_types_of_tests = pd.Series(types_of_tests).unique()
+        hunter_dfs = [hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated,
+                      hunter_df_10000_fixed, hunter_df_10000_rated]
+        for i, hunter_df in enumerate(hunter_dfs):
+            hunter_dfs[i] = pd.concat(hunter_df)
+        hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated, hunter_df_10000_fixed, \
+            hunter_df_10000_rated = hunter_dfs
 
         # Save two versions of the df: 1) with the Cassandra git shas only (for hunter), 2) with two git shas (of the
         # Cassandra and fallout-tests repos) for auditability
-        for unique_test_type in unique_types_of_tests:
-            hunter_prefix = 'hunter-'
-            if '-fixed-100-' in unique_test_type:
-                hunter_file_name = f'{hunter_prefix}{unique_test_type}'
+        unique_types_of_tests = pd.Series(types_of_tests).unique()
+        subset_names_w_dfs = {
+            SUBSTR_TESTS_NAMES[0]: hunter_df_100_fixed,
+            SUBSTR_TESTS_NAMES[1]: hunter_df_100_rated,
+            SUBSTR_TESTS_NAMES[2]: hunter_df_1000_fixed,
+            SUBSTR_TESTS_NAMES[3]: hunter_df_1000_rated,
+            SUBSTR_TESTS_NAMES[4]: hunter_df_10000_fixed,
+            SUBSTR_TESTS_NAMES[5]: hunter_df_10000_rated
+        }
 
-                save_df_to_csv(hunter_df_100_fixed,
-                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-
-                hunter_df_100_fixed_w_one_git_sha = hunter_df_100_fixed.drop(
-                    FALLOUT_TESTS_COL_NAME, axis=1)
-                save_df_to_csv(
-                    hunter_df_100_fixed_w_one_git_sha,
-                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
-            elif '-rated-100-' in unique_test_type:
-                hunter_file_name = f'{hunter_prefix}{unique_test_type}'
-
-                save_df_to_csv(hunter_df_100_rated,
-                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-
-                hunter_df_100_rated_w_one_git_sha = hunter_df_100_rated.drop(
-                    FALLOUT_TESTS_COL_NAME, axis=1)
-                save_df_to_csv(
-                    hunter_df_100_rated_w_one_git_sha,
-                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
-            elif '-fixed-1000-' in unique_test_type:
-                hunter_file_name = f'{hunter_prefix}{unique_test_type}'
-
-                save_df_to_csv(hunter_df_1000_fixed,
-                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-
-                hunter_df_1000_fixed_w_one_git_sha = hunter_df_1000_fixed.drop(
-                    FALLOUT_TESTS_COL_NAME, axis=1)
-                save_df_to_csv(
-                    hunter_df_1000_fixed_w_one_git_sha,
-                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
-            elif '-rated-1000-' in unique_test_type:
-                hunter_file_name = f'{hunter_prefix}{unique_test_type}'
-
-                save_df_to_csv(hunter_df_1000_rated,
-                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-
-                hunter_df_1000_rated_w_one_git_sha = hunter_df_1000_rated.drop(
-                    FALLOUT_TESTS_COL_NAME, axis=1)
-                save_df_to_csv(
-                    hunter_df_1000_rated_w_one_git_sha,
-                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
-            elif '-fixed-10000-' in unique_test_type:
-                hunter_file_name = f'{hunter_prefix}{unique_test_type}'
-
-                save_df_to_csv(hunter_df_10000_fixed,
-                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-
-                hunter_df_10000_fixed_w_one_git_sha = hunter_df_10000_fixed.drop(
-                    FALLOUT_TESTS_COL_NAME, axis=1)
-                save_df_to_csv(
-                    hunter_df_10000_fixed_w_one_git_sha,
-                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
-            elif '-rated-10000-' in unique_test_type:
-                hunter_file_name = f'{hunter_prefix}{unique_test_type}'
-
-                save_df_to_csv(hunter_df_10000_rated,
-                               f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
-
-                hunter_df_10000_rated_w_one_git_sha = hunter_df_10000_rated.drop(
-                    FALLOUT_TESTS_COL_NAME, axis=1)
-                save_df_to_csv(
-                    hunter_df_10000_rated_w_one_git_sha,
-                    f'{HUNTER_CSV_PROJ_DIR}{os.sep}{hunter_file_name}{HUNTER_FILE_FMT}')
-            else:
-                get_error_log(unique_test_type)
+        for i, unique_test_type in enumerate(unique_types_of_tests):
+            for subset_names, hunter_df in subset_names_w_dfs.items():
+                if subset_names in unique_test_type:
+                    hunter_file_name = f'{HUNTER_PREFIX}{unique_test_type}'
+                    df = subset_names_w_dfs[subset_names]
+                    save_df_to_csv(df,
+                                   f'{HUNTER_CSV_PROJ_DIR}{os.sep}'
+                                   f'{hunter_file_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}')
+                    df_w_one_git_sha = df.drop(FALLOUT_TESTS_COL_NAME, axis=1)
+                    save_df_to_csv(df_w_one_git_sha,
+                                   f'{HUNTER_CSV_PROJ_DIR}{os.sep}'
+                                   f'{hunter_file_name}{HUNTER_FILE_FMT}')
