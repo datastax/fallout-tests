@@ -9,7 +9,7 @@ databases using the [Fallout tool](https://github.com/datastax/fallout).
 Instructions for each of the two purposes above are provided below.
 
 
-## Instructions to run performance tests via Fallout on Cassandra
+## Running performance tests via Fallout on Cassandra
 
 ### What is Fallout
 [Fallout](https://github.com/datastax/fallout) is a tool for running large scale remote-based distributed correctness, verification and performance tests for Apache Cassandra (TM) and Apache Pulsar (TM).
