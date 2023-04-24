@@ -225,7 +225,6 @@ if __name__ == '__main__':
             raise ValueError(f"The test results for the date '{test_input_date}' were already run and summarised "
                              f"in the csv file. Please ensure the date considered is not in the csv file and it is "
                              f"past the latest date in the csv file.")
-        type_of_test = type(test_input_date)
 
         # Get path to the latest test run
         path_w_date = f'{NIGHTLY_RESULTS_DIR}{os.sep}{test_input_date}'
