@@ -9,7 +9,7 @@ databases using the [Fallout tool](https://github.com/datastax/fallout).
 Instructions for each of the two purposes above are provided below.
 
 
-## Instructions to run performance tests via Fallout on Cassandra
+## Running performance tests via Fallout on Cassandra
 
 ### What is Fallout
 [Fallout](https://github.com/datastax/fallout) is a tool for running large scale remote-based distributed correctness, verification and performance tests for Apache Cassandra (TM) and Apache Pulsar (TM).
@@ -47,7 +47,7 @@ template-params        Template params for test-yaml-file in the form
 ```
 
 
-## Instructions to create a csv file with results from performance tests for hunter
+## Analysing performance test results with hunter
 
 ### What is Hunter
 [Hunter](https://github.com/datastax-labs/hunter) performs statistical analysis of performance test results stored in CSV files or Graphite database. 
