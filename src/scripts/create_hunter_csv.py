@@ -204,12 +204,13 @@ if __name__ == '__main__':
 
     # Set to False if running this for the first time, then re-run and set to True.
     is_case_prospective = PROSPECTIVE_MODE
+    # Get path of previous csv files from retrospective
     if is_case_prospective:
         csv_file_paths = []
         for csv_file_name in LIST_OF_CSV_NAMES:
             csv_file_paths.append(
                 f'{HUNTER_CSV_PROJ_DIR}{os.sep}{csv_file_name}{HUNTER_FILE_FMT}')
-
+        # Read the csv files of retrospective run
         hunter_df_fixed_100, hunter_df_rated_100, hunter_df_fixed_1000, \
             hunter_df_rated_1000, hunter_df_fixed_10000, hunter_df_rated_10000 = \
             (pd.read_csv(csv_file_path) for csv_file_path in csv_file_paths)
@@ -298,8 +299,11 @@ if __name__ == '__main__':
                 else:
                     get_error_log(type_of_test)
 
+        # Create a list of lists of dfs from 6 lists of dfs
         hunter_dfs = [hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated,
                       hunter_df_10000_fixed, hunter_df_10000_rated]
+
+        # Create a concatenated df from the above list of lists of dfs and extracts it into 6 different dfs
         for i, hunter_df in enumerate(hunter_dfs):
             hunter_dfs[i] = pd.concat(hunter_df)
         hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated, hunter_df_10000_fixed, \

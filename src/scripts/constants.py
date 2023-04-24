@@ -83,4 +83,4 @@ DICT_OF_RENAMED_COLS = {
 USE_LOG_FILE = True
 
 # Types of performance tests currently supported
-TUPLE_SUPPORTED_TESTS = ('lwt-')
+TUPLE_SUPPORTED_TESTS = ('lwt-',)

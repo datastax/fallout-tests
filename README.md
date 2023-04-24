@@ -53,6 +53,14 @@ template-params        Template params for test-yaml-file in the form
 [Hunter](https://github.com/datastax-labs/hunter) performs statistical analysis of performance test results stored in CSV files or Graphite database. 
 It finds change-points and notifies about possible performance regressions.
 
+### Prospective and retrospective analyses
+The Python script `src/scripts/create_hunter_csv.py` can be run in two ways based on the constant `PROSPECTIVE_MODE` set in the file `src/scripts/constants.py`: 
+- if `False`, a retrospective analysis would be carried out to generate one df and corresponding csv file for each test type that groups performance results already exported on a nightly basis from previous dates;
+- if `True` (by default), a prospective analysis would be performed wherein only the current/ latest test run's results are taken and concatenated to the above results from the 
+retrospective analysis on a nightly basis.
+
+In future, this constant would be an input argument of a command line tool for ease of usage.
+
 ### Dependencies to create the csv file for hunter
 - [Install hunter](https://github.com/datastax-labs/hunter#installation)
 - Run `conda env create --file environment.yml` to install required dependencies for codes under `src` and `tests` folders
