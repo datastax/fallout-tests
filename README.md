@@ -47,7 +47,7 @@ template-params        Template params for test-yaml-file in the form
 ```
 
 
-## Instructions to create a csv file with results from performance tests for hunter
+## Analysing performance test results with hunter
 
 ### What is Hunter
 [Hunter](https://github.com/datastax-labs/hunter) performs statistical analysis of performance test results stored in CSV files or Graphite database. 
