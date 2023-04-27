@@ -8,10 +8,10 @@ import sys
 from email.message import EmailMessage
 from typing import List, Tuple
 
-from ..utils import get_git_sha_for_cassandra, get_git_sha_for_fallout_tests
-from .constants import (ALL_BAD_SIGNIF_CHANGES, RECEIVER_EMAIL, TEMPLATE_MSG,
-                        THRESH_PERF_REGRESS, TXT_FILE_W_MSG)
-from .utils import get_aws_secrets, get_list_of_dict_from_json
+from constants import (ALL_BAD_SIGNIF_CHANGES, RECEIVER_EMAIL, TEMPLATE_MSG,
+                       THRESH_PERF_REGRESS, TXT_FILE_W_MSG)
+from utils import (get_aws_secrets, get_git_sha_for_cassandra,
+                   get_git_sha_for_fallout_tests, get_list_of_dict_from_json)
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
