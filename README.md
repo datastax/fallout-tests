@@ -65,6 +65,9 @@ In future, this constant would be an input argument of a command line tool for e
 - [Install hunter](https://github.com/datastax-labs/hunter#installation)
 - Run `conda env create --file environment.yml` to install required dependencies for codes under `src` and `tests` folders
 
+### Install the Python package via pip
+- Run `pip install -e .` to use the `setup.py` and install the codes as a Python package in editable mode
+
 ### How to generate a csv for Hunter
 - Run `python src/scripts/hunter_csv/create_hunter_csv.py`
 - 6 csv files will be output in the top-level directory, which can be fed to Hunter (one at a time for each type of test)
