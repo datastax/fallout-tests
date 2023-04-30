@@ -1,2 +1,6 @@
 # Exclude idea folder
 .idea
+
+# Ignore email report and log file with regressions sent by email
+src/scripts/email_report.txt
+src/scripts/regressions_sent_by_email.txt

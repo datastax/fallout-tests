@@ -95,12 +95,11 @@ SECRET_NAME = '<SECRET_NAME>'
 # Thresholds for sending email
 THRESH_PERF_REGRESS = 11  # Determined based on retro analysis on Apr 16th, 2023
 
-# Filenames for sending email
+# Filename for sending email
 TXT_FILE_W_MSG = 'email_report.txt'
 
-# Set boolean flag below to true to consider all bad significant changes detected by hunter; if False, only
-# consider those that are highly significant (whose % change is beyond +/- THRESH_PERF_REGRESS %).
-ALL_BAD_SIGNIF_CHANGES = False
+# Filename for logging regressions sent by email
+LOG_FILE_W_MSG = 'regressions_sent_by_email.txt'
 
 # Template email message
 TEMPLATE_MSG = 'Hello,\n\nPlease find the performance regressions detected ' \

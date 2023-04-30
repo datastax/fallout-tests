@@ -6,48 +6,60 @@ import logging
 import smtplib
 import sys
 from email.message import EmailMessage
-from typing import List, Tuple
+from pathlib import Path
+from typing import List
 
-from constants import (ALL_BAD_SIGNIF_CHANGES, RECEIVER_EMAIL, TEMPLATE_MSG,
-                       THRESH_PERF_REGRESS, TXT_FILE_W_MSG)
-from utils import (get_aws_secrets, get_git_sha_for_cassandra,
-                   get_git_sha_for_fallout_tests, get_list_of_dict_from_json)
+import pandas as pd
+
+from src.scripts.constants import (LOG_FILE_W_MSG, RECEIVER_EMAIL,
+                                   TEMPLATE_MSG, THRESH_PERF_REGRESS,
+                                   TXT_FILE_W_MSG)
+from src.scripts.utils import (get_aws_secrets, get_git_sha_for_cassandra,
+                               get_git_sha_for_fallout_tests,
+                               get_list_of_dict_from_json)
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-# TODO: To test that this code works correctly with multiple dictionaries in the json
-# TODO: Do not re-run code below if results from hunter were already analysed
-# This json file contains multiple dictionaries
-json_file_path = '/home/ec2-user/hunter_clone/hunter/hunter_result_fixed_100.json'
 
+def get_list_of_signif_changes_w_context(
+        hunter_results_list_of_dicts: List[dict[List[dict]]],
+        threshold: float = THRESH_PERF_REGRESS
+) -> List[str]:
+    """
+    Get a list of highly (above or below on a threshold) bad significant changes detected by hunter
+    with context.
 
-# TODO: Add function's docstring
-def get_lists_of_signif_changes_w_context(
-        hunter_results_list_of_dicts: List[dict]
-) -> Tuple[List[str], List[str]]:
+    Args:
+        hunter_results_list_of_dicts: List[dict[List[dict]]]
+                                    A list of dictionaries from hunter results.
+        threshold: float
+                A threshold above or below (+/-) which highly bad significant changes are detected.
 
+    Returns:
+            A list of highly bad significant changes.
+    """
     for hunter_dict in hunter_results_list_of_dicts:
         test_type = next(iter(hunter_dict))
 
         if hunter_dict == {}:
-            logging.info(f"No significant changes were detected for any metrics by hunter, "
-                         f"as per the file named '{json_file_path}'.")
+            logging.info(
+                'No significant changes were detected for any metrics by hunter')
         # A list of dictionaries, each of which corresponds to one date of significant
         # changes wrt metrics detected by hunter
-        list_of_time_and_signif_changes = hunter_dict['lwt-fixed-100-partitions']
+        list_of_time_and_signif_changes = hunter_dict[test_type]
 
-        list_of_all_signif_changes_w_context = []  # All (significant) changes detected by hunter
-        list_of_all_bad_signif_changes_w_context = []  # Only bad changes regardless of their % change
-        list_of_all_bad_highly_signif_changes_w_context = []  # Only bad changes beyond +/- % threshold
+        # Only bad changes beyond +/- % threshold
+        list_of_all_bad_highly_signif_changes_w_context = []
         for dict_of_time_and_changes in list_of_time_and_signif_changes:
-            date = dict_of_time_and_changes['time'].replace("-", "_").split(' ')
+            date = dict_of_time_and_changes['time'].replace(
+                "-", "_").split(' ')
             cass_git_sha = get_git_sha_for_cassandra(date[0])
             fallout_tests_git_sha = get_git_sha_for_fallout_tests(date[0])
             if dict_of_time_and_changes['changes'] == 0:
                 logging.info(f"There are no significant changes detected for the date and time "
                              f"'{dict_of_time_and_changes['time']}'.")
-            for change in dict_of_time_and_changes['changes']:
 
+            for change in dict_of_time_and_changes['changes']:
                 significant_change_w_context = f"For the test '{test_type}' on date and time " \
                                                f"'{dict_of_time_and_changes['time']}' that ran on cassandra Git " \
                                                f"commit SHA '{cass_git_sha}' and on fallout-tests Git commit " \
@@ -55,49 +67,113 @@ def get_lists_of_signif_changes_w_context(
                                                f"The metric '{change['metric']}' changed by " \
                                                f"{change['forward_change_percent']}%.\n"
                 logging.info(significant_change_w_context)
-                list_of_all_signif_changes_w_context.append(significant_change_w_context)
 
                 # For totalOps, opRate: bad changes would occur if their values decreased (i.e., the lower, the worse).
                 # For all other metrics (minLat, avgLat, medianLat, p95, p99, p99.9, maxLat, MAD, and IQR):
                 # bad changes would occur if their values increased (i.e., the higher, the worse, as higher latencies
                 # and higher variations/spread are detrimental to performance).
                 if change['metric'].startswith('totalOps') or change['metric'].startswith('opRate'):
-                    if float(change['forward_change_percent']) < 0:
-                        list_of_all_bad_signif_changes_w_context.append(significant_change_w_context)
-                        if float(change['forward_change_percent']) < -THRESH_PERF_REGRESS:
-                            list_of_all_bad_highly_signif_changes_w_context.append(significant_change_w_context)
+                    if float(change['forward_change_percent']) < -threshold:
+                        list_of_all_bad_highly_signif_changes_w_context.append(
+                            significant_change_w_context)
 
                 else:  # for all other metrics
-                    if float(change['forward_change_percent']) > 0:
-                        list_of_all_bad_signif_changes_w_context.append(significant_change_w_context)
-                        if float(change['forward_change_percent']) > THRESH_PERF_REGRESS:
-                            list_of_all_bad_highly_signif_changes_w_context.append(significant_change_w_context)
-        return list_of_all_bad_signif_changes_w_context, list_of_all_bad_highly_signif_changes_w_context
+                    if float(change['forward_change_percent']) > threshold:
+                        list_of_all_bad_highly_signif_changes_w_context.append(
+                            significant_change_w_context)
+
+        all_bad_highly_signif_changes_combos_series = pd.Series(
+            list_of_all_bad_highly_signif_changes_w_context)
+        all_bad_highly_signif_changes_combos_and_freqs = all_bad_highly_signif_changes_combos_series.value_counts()
+
+        list_of_unique_all_bad_highly_signif_changes = []
+        for i in range(len(all_bad_highly_signif_changes_combos_and_freqs)):
+            if all_bad_highly_signif_changes_combos_and_freqs.iloc[i] == 1:
+                list_of_unique_all_bad_highly_signif_changes.append(
+                    all_bad_highly_signif_changes_combos_and_freqs.index[i]
+                )
+
+        return list_of_unique_all_bad_highly_signif_changes
 
 
 def create_email_w_hunter_regressions(
-    list_of_bad_signif_changes_w_context: List[str],
-    list_of_bad_highly_signif_changes_w_context: List[str]
-) -> None:
+        new_changes: str,
+        output_email_msg_path: str = TXT_FILE_W_MSG
+) -> None:  # pragma: no cover
     """
-    Create email with performance regressions detected by hunter.
-    """
+    Create email with new performance regressions detected by hunter.
 
+    Args:
+        new_changes: str
+                   New bad/highly bad significant changes detected by hunter with context to be sent by email.
+        output_email_msg_path: str
+                            The path with file extension (.txt) to save the txt file of the entire email report.
+    """
     # Write email content to txt file
-    with open(TXT_FILE_W_MSG, 'w') as text_file:
-
-        if ALL_BAD_SIGNIF_CHANGES:
-            text_to_add = "\n".join(list_of_bad_signif_changes_w_context)
-        else:
-            text_to_add = "\n".join(list_of_bad_highly_signif_changes_w_context)
-
+    with open(output_email_msg_path, 'w') as text_file:
         # Insert list of performance regression detected into template msg above
-        data_to_txt_file = TEMPLATE_MSG.replace('\n\n\n', f'\n\n{text_to_add}\n')
-
+        data_to_txt_file = TEMPLATE_MSG.replace(
+            '\n\n\n', f'\n\n{new_changes}\n')
         text_file.writelines(data_to_txt_file)
 
 
-def read_txt_send_email() -> None:
+def create_file_w_regressions_sent_by_email(
+        list_of_bad_highly_signif_changes_w_context: List[str],
+        initial_lines_in_log: List[str],
+        output_log_file_path: str = LOG_FILE_W_MSG
+) -> str:
+    """
+    Create log file with performance regressions detected by hunter and sent by email to avoid sending them again,
+    and adds new regressions to existing list of regressions if any.
+
+    Args:
+        list_of_bad_highly_signif_changes_w_context: List[str]
+                                            A list of highly bad significant changes detected by hunter with context.
+        initial_lines_in_log: List[str]
+                            Initial lines in the log file (if any).
+        output_log_file_path: str
+                            The path with file extension (.txt) to save the regressions sent by email.
+
+    Returns:
+            A string with new change/s detected to then be sent by email too (besides being added to the log file
+            for tracking purposes and to avoid sending it again later on).
+    """
+    # Write log content to txt file (use append/'a' mode not to overwrite the previous contents with mode 'w' otherwise)
+    with open(output_log_file_path, 'a') as text_file:
+        newline_symbol = "\n"
+        text_to_add = newline_symbol.join(
+            list_of_bad_highly_signif_changes_w_context)
+        initial_lines_in_log_joined = ''.join(initial_lines_in_log)
+
+        # Skip initial newline not to create an unnecessary empty line at the top of the log file
+        initial_lines_in_log_joined = initial_lines_in_log_joined.lstrip(
+            newline_symbol)
+        text_to_add = text_to_add.lstrip(newline_symbol)
+
+        # Only add new regressions (not to duplicate the old regressions)
+        new_changes = []
+        for item_list in text_to_add.split('\n\n'):
+            if item_list not in initial_lines_in_log_joined:
+                new_changes.append(item_list)
+
+        new_changes = '\n\n'.join(new_changes)
+
+        # Add newline at the beginning of the new changes to then concatenate it with the previous ones consistently
+        new_changes = f'{newline_symbol}{new_changes}'
+
+        if initial_lines_in_log_joined != text_to_add:
+            if text_to_add != '':
+                # If some regressions were already in the log file (from previous runs), add new regressions
+                if len(initial_lines_in_log) != 0 or initial_lines_in_log_joined != '':
+                    text_to_add = new_changes
+
+                # Insert list of performance regression sent by email
+                text_file.writelines(text_to_add)
+
+                return new_changes
+
+
+def read_txt_send_email() -> None:  # pragma: no cover
     """
     Read message from a txt file with performance regressions detected by hunter and send it as an email.
     """
@@ -106,10 +182,7 @@ def read_txt_send_email() -> None:
         msg = EmailMessage()
         msg.set_content(txt_file.read())
 
-    if ALL_BAD_SIGNIF_CHANGES:
-        keywords_changes = 'All performance '
-    else:
-        keywords_changes = f'The most significant (+/- {THRESH_PERF_REGRESS}%) performance '
+    keywords_changes = f'The most significant (+/- {THRESH_PERF_REGRESS}%) performance '
 
     # Set up email details
     secret_creds = get_aws_secrets()
@@ -133,18 +206,36 @@ def read_txt_send_email() -> None:
     s.quit()
 
 
-def main():
+def main():  # pragma: no cover
     """
     Get performance regressions detected by hunter and send them via email
     """
-    hunter_list_of_dicts = get_list_of_dict_from_json(json_file_path)
+    # TODO: To adapt this code for it to work correctly with multiple json/test types from various dates
+    orig_json_path = '<JSON_PATH>'
 
-    list_of_bad_signif_changes_w_context, list_of_bad_highly_signif_changes_w_context = \
-        get_lists_of_signif_changes_w_context(hunter_list_of_dicts)
+    hunter_list_of_dicts = get_list_of_dict_from_json(orig_json_path)
 
-    create_email_w_hunter_regressions(list_of_bad_signif_changes_w_context, list_of_bad_highly_signif_changes_w_context)
+    list_of_bad_highly_signif_changes_w_context = get_list_of_signif_changes_w_context(
+        hunter_list_of_dicts)
 
-    read_txt_send_email()
+    initial_log_lines = ''
+    path_to_log_file = Path(LOG_FILE_W_MSG)
+    if path_to_log_file.exists():
+        with open(LOG_FILE_W_MSG, 'r') as log_txt_file:
+            initial_log_lines = log_txt_file.readlines()
+
+    new_changes_str = create_file_w_regressions_sent_by_email(
+        list_of_bad_highly_signif_changes_w_context,
+        initial_log_lines
+    )
+
+    # Only create and send an email if there were any new changes detected
+    if new_changes_str is not None and new_changes_str != '':
+        # Strip newline symbol previously added on the left-hand side
+        new_changes_str = new_changes_str.lstrip('\n')
+
+        create_email_w_hunter_regressions(new_changes_str)
+        read_txt_send_email()
 
 
 if __name__ == '__main__':

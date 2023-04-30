@@ -12,16 +12,19 @@ from typing import List, Tuple
 
 import pandas as pd
 
-from constants import (DATE_DIR_REGEX_PATTERN, DICT_OF_RENAMED_COLS,
-                       FALLOUT_TESTS_COL_NAME, HUNTER_CSV_PROJ_DIR,
-                       HUNTER_FILE_FMT, HUNTER_PREFIX, LIST_OF_COLS_TO_EXTRACT,
-                       LIST_OF_CSV_NAMES, LWT_TEST_RUN_EXEC_TIME,
-                       LWT_TESTS_NAMES, NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
-                       SUBSTR_TESTS_NAMES, TUPLE_SUPPORTED_TESTS,
-                       TWO_GIT_SHA_SUFFIX)
-from utils import (add_cols_to_metrics_df, add_suffix_to_col, get_error_log,
-                   get_git_sha_for_cassandra, get_git_sha_for_fallout_tests,
-                   get_relevant_dict, save_df_to_csv)
+from src.scripts.constants import (DATE_DIR_REGEX_PATTERN,
+                                   DICT_OF_RENAMED_COLS,
+                                   FALLOUT_TESTS_COL_NAME, HUNTER_CSV_PROJ_DIR,
+                                   HUNTER_FILE_FMT, HUNTER_PREFIX,
+                                   LIST_OF_COLS_TO_EXTRACT, LIST_OF_CSV_NAMES,
+                                   LWT_TEST_RUN_EXEC_TIME, LWT_TESTS_NAMES,
+                                   NIGHTLY_RESULTS_DIR, PROSPECTIVE_MODE,
+                                   SUBSTR_TESTS_NAMES, TUPLE_SUPPORTED_TESTS,
+                                   TWO_GIT_SHA_SUFFIX)
+from src.scripts.utils import (add_cols_to_metrics_df, add_suffix_to_col,
+                               get_error_log, get_git_sha_for_cassandra,
+                               get_git_sha_for_fallout_tests,
+                               get_relevant_dict, save_df_to_csv)
 
 
 def extract_metrics_df(read_rel_dict: dict, write_rel_dict: dict) -> pd.DataFrame:

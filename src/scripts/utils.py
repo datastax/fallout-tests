@@ -13,9 +13,9 @@ import boto3
 import pandas as pd
 from botocore.exceptions import ClientError
 
-from constants import (CASSANDRA_COL_NAME, FALLOUT_TESTS_COL_NAME,
-                       FALLOUT_TESTS_SHA_PROJ_DIR, LWT_TESTS_NAMES,
-                       NIGHTLY_RESULTS_DIR, REGION_NAME, SECRET_NAME)
+from src.scripts.constants import (CASSANDRA_COL_NAME, FALLOUT_TESTS_COL_NAME,
+                        FALLOUT_TESTS_SHA_PROJ_DIR, LWT_TESTS_NAMES,
+                        NIGHTLY_RESULTS_DIR, REGION_NAME, SECRET_NAME)
 
 
 def add_cols_to_metrics_df(
@@ -71,7 +71,7 @@ def add_suffix_to_col(phase_df: pd.DataFrame, phase: str) -> pd.DataFrame:
     return phase_df
 
 
-def get_git_sha_for_cassandra(input_date: str) -> str:
+def get_git_sha_for_cassandra(input_date: str) -> str:  # pragma: no cover
     """
     Get the Git sha of the Cassandra repo for a given date from a logs.txt file.
 
@@ -110,7 +110,7 @@ def get_git_sha_for_cassandra(input_date: str) -> str:
     return final_cass_sha
 
 
-def get_git_sha_for_fallout_tests(input_date: str) -> str:
+def get_git_sha_for_fallout_tests(input_date: str) -> str:  # pragma: no cover
     """
     Get the Git sha of the fallout-tests repo for a given date from a fallout-tests_git_sha.log file.
 
@@ -168,7 +168,7 @@ def get_relevant_dict(dict_of_dicts: dict, test_phase: str) -> dict:
     return relevant_dict
 
 
-def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
+def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:  # pragma: no cover
     """
     Save an input dataframe to a csv file in a chosen filename.
 
@@ -178,11 +178,10 @@ def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
         path_to_output: str
                 The filename where to save the input dataframe.
     """
-
     input_df.to_csv(path_to_output, index=False)
 
 
-def get_aws_secrets() -> dict:
+def get_aws_secrets() -> dict:  # pragma: no cover
     """
     Get secrets (username and password) from the AWS Secret Manager.
 
@@ -223,7 +222,6 @@ def get_list_of_dict_from_json(file_path: str) -> List[dict]:
     Returns:
             A list of dictionaries (one dict for each line in the json file).
     """
-
     hunter_result_list_of_dicts = []
     with open(file_path, 'r') as json_file:
         for hunter_result_str in json_file:
