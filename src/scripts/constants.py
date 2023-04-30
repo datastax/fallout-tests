@@ -6,6 +6,7 @@ This Python file contains all constants used throughout the hunter_csv applicati
 CASSANDRA_PROJ_DIR = '/home/ec2-user/cassandra'
 FALLOUT_TESTS_PROJ_DIR = '/home/ec2-user/fallout-tests'
 FALLOUT_TESTS_SHA_PROJ_DIR = '/home/ec2-user/fallout-tests_sha'
+HUNTER_CLONE_PROJ_DIR = '/home/ec2-user/hunter_clone/hunter'
 HUNTER_CSV_PROJ_DIR = '/home/ec2-user/hunter_csv'
 NIGHTLY_RESULTS_DIR = '/home/ec2-user/nightly_results'
 
@@ -109,3 +110,8 @@ TEMPLATE_MSG = 'Hello,\n\nPlease find the performance regressions detected ' \
 RECEIVER_EMAIL = '<EMAIL_ADDRESS>'
 
 NEWLINE_SYMBOL = '\n'
+
+LIST_OF_HUNTER_RESULTS_JSONS = [
+    'hunter_result_fixed_100.json', 'hunter_result_fixed_1000.json', 'hunter_result_fixed_10000.json',
+    'hunter_result_rated_100.json', 'hunter_result_rated_1000.json', 'hunter_result_rated_10000.json'
+]

@@ -3,6 +3,7 @@ This is a python file to send email to the Cassandra mailing list if hunter dete
 """
 
 import logging
+import os
 import smtplib
 import sys
 from email.message import EmailMessage
@@ -11,7 +12,9 @@ from typing import List
 
 import pandas as pd
 
-from src.scripts.constants import (LOG_FILE_W_MSG, NEWLINE_SYMBOL,
+from src.scripts.constants import (HUNTER_CLONE_PROJ_DIR,
+                                   LIST_OF_HUNTER_RESULTS_JSONS,
+                                   LOG_FILE_W_MSG, NEWLINE_SYMBOL,
                                    RECEIVER_EMAIL, TEMPLATE_MSG,
                                    THRESH_PERF_REGRESS, TXT_FILE_W_MSG)
 from src.scripts.utils import (get_aws_secrets, get_git_sha_for_cassandra,
@@ -208,34 +211,41 @@ def read_txt_send_email() -> None:  # pragma: no cover
 
 def main():  # pragma: no cover
     """
-    Get performance regressions detected by hunter and send them via email
+    Get performance regressions detected by hunter and send them via one email
     """
-    # TODO: To adapt this code for it to work correctly with multiple json/test types from various dates
-    orig_json_path = '<JSON_PATH>'
 
-    hunter_list_of_dict = get_list_of_dict_from_json(orig_json_path)
+    list_of_paths_to_json = []
+    for hunter_result_name in LIST_OF_HUNTER_RESULTS_JSONS:
+        list_of_paths_to_json.append(f'{HUNTER_CLONE_PROJ_DIR}{os.sep}{hunter_result_name}')
 
-    list_of_bad_highly_signif_changes_w_context = get_list_of_signif_changes_w_context(
-        hunter_list_of_dict)
+    new_changes_strings_list = []
+    for orig_json_path in list_of_paths_to_json:
+        hunter_list_of_dict = get_list_of_dict_from_json(orig_json_path)
 
-    initial_log_lines = ''
-    path_to_log_file = Path(LOG_FILE_W_MSG)
-    if path_to_log_file.exists():
-        with open(LOG_FILE_W_MSG, 'r') as log_txt_file:
-            initial_log_lines = log_txt_file.readlines()
+        list_of_bad_highly_signif_changes_w_context = get_list_of_signif_changes_w_context(
+            hunter_list_of_dict)
 
-    new_changes_str = create_file_w_regressions_sent_by_email(
-        list_of_bad_highly_signif_changes_w_context,
-        initial_log_lines
-    )
+        initial_log_lines = ''
+        path_to_log_file = Path(LOG_FILE_W_MSG)
+        if path_to_log_file.exists():
+            with open(LOG_FILE_W_MSG, 'r') as log_txt_file:
+                initial_log_lines = log_txt_file.readlines()
 
+        new_changes_str = create_file_w_regressions_sent_by_email(
+            list_of_bad_highly_signif_changes_w_context,
+            initial_log_lines
+        )
+
+        new_changes_strings_list.append(new_changes_str)
+
+    new_changes_str_concat = ''.join(new_changes_strings_list)
     # Only create and send an email if there were any new changes detected
-    if new_changes_str != NEWLINE_SYMBOL:
-        if new_changes_str is not None and new_changes_str != '':
+    if new_changes_str_concat != NEWLINE_SYMBOL:
+        if new_changes_str_concat is not None and new_changes_str_concat != '':
             # Strip newline symbol previously added on the left-hand side
-            new_changes_str = new_changes_str.lstrip(NEWLINE_SYMBOL)
+            new_changes_str_concat = new_changes_str_concat.lstrip(NEWLINE_SYMBOL)
 
-            create_email_w_hunter_regressions(new_changes_str)
+            create_email_w_hunter_regressions(new_changes_str_concat)
             read_txt_send_email()
 
 
