@@ -14,8 +14,9 @@ import pandas as pd
 from botocore.exceptions import ClientError
 
 from src.scripts.constants import (CASSANDRA_COL_NAME, FALLOUT_TESTS_COL_NAME,
-                        FALLOUT_TESTS_SHA_PROJ_DIR, LWT_TESTS_NAMES,
-                        NIGHTLY_RESULTS_DIR, REGION_NAME, SECRET_NAME)
+                                   FALLOUT_TESTS_SHA_PROJ_DIR, LWT_TESTS_NAMES,
+                                   NEWLINE_SYMBOL, NIGHTLY_RESULTS_DIR,
+                                   REGION_NAME, SECRET_NAME)
 
 
 def add_cols_to_metrics_df(
@@ -97,7 +98,7 @@ def get_git_sha_for_cassandra(input_date: str) -> str:  # pragma: no cover
     for logs in log_files_list:
         with open(logs, 'r') as text:
             content = ' '.join(text.readlines())
-            git_sha = content.split('Git SHA: ')[1].split('\n')[0]
+            git_sha = content.split('Git SHA: ')[1].split(NEWLINE_SYMBOL)[0]
             git_sha_list.append(git_sha)
 
     # Get the first non-empty Git sha as the final one, as at times one subtest may not yield results, whilst
@@ -228,4 +229,7 @@ def get_list_of_dict_from_json(file_path: str) -> List[dict]:
             # Convert each line to a dict
             hunter_result_dict = json.loads(hunter_result_str)
             hunter_result_list_of_dicts.append(hunter_result_dict)
-    return hunter_result_list_of_dicts
+    # Get and return the last dictionary
+    hunter_result_dict = hunter_result_list_of_dicts[-1]
+    hunter_result_list_of_dict = [hunter_result_dict]
+    return hunter_result_list_of_dict

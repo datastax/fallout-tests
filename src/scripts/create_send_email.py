@@ -11,9 +11,9 @@ from typing import List
 
 import pandas as pd
 
-from src.scripts.constants import (LOG_FILE_W_MSG, RECEIVER_EMAIL,
-                                   TEMPLATE_MSG, THRESH_PERF_REGRESS,
-                                   TXT_FILE_W_MSG)
+from src.scripts.constants import (LOG_FILE_W_MSG, NEWLINE_SYMBOL,
+                                   RECEIVER_EMAIL, TEMPLATE_MSG,
+                                   THRESH_PERF_REGRESS, TXT_FILE_W_MSG)
 from src.scripts.utils import (get_aws_secrets, get_git_sha_for_cassandra,
                                get_git_sha_for_fallout_tests,
                                get_list_of_dict_from_json)
@@ -140,15 +140,14 @@ def create_file_w_regressions_sent_by_email(
     """
     # Write log content to txt file (use append/'a' mode not to overwrite the previous contents with mode 'w' otherwise)
     with open(output_log_file_path, 'a') as text_file:
-        newline_symbol = "\n"
-        text_to_add = newline_symbol.join(
+        text_to_add = NEWLINE_SYMBOL.join(
             list_of_bad_highly_signif_changes_w_context)
         initial_lines_in_log_joined = ''.join(initial_lines_in_log)
 
         # Skip initial newline not to create an unnecessary empty line at the top of the log file
         initial_lines_in_log_joined = initial_lines_in_log_joined.lstrip(
-            newline_symbol)
-        text_to_add = text_to_add.lstrip(newline_symbol)
+            NEWLINE_SYMBOL)
+        text_to_add = text_to_add.lstrip(NEWLINE_SYMBOL)
 
         # Only add new regressions (not to duplicate the old regressions)
         new_changes = []
@@ -159,18 +158,19 @@ def create_file_w_regressions_sent_by_email(
         new_changes = '\n\n'.join(new_changes)
 
         # Add newline at the beginning of the new changes to then concatenate it with the previous ones consistently
-        new_changes = f'{newline_symbol}{new_changes}'
+        new_changes = f'{NEWLINE_SYMBOL}{new_changes}'
 
-        if initial_lines_in_log_joined != text_to_add:
-            if text_to_add != '':
-                # If some regressions were already in the log file (from previous runs), add new regressions
-                if len(initial_lines_in_log) != 0 or initial_lines_in_log_joined != '':
-                    text_to_add = new_changes
+        if new_changes != NEWLINE_SYMBOL:
+            if initial_lines_in_log_joined != text_to_add:
+                if text_to_add != '':
+                    # If some regressions were already in the log file (from previous runs), add new regressions
+                    if len(initial_lines_in_log) != 0 or initial_lines_in_log_joined != '':
+                        text_to_add = new_changes
 
-                # Insert list of performance regression sent by email
-                text_file.writelines(text_to_add)
+                    # Insert list of performance regression sent by email
+                    text_file.writelines(text_to_add)
 
-                return new_changes
+                    return new_changes
 
 
 def read_txt_send_email() -> None:  # pragma: no cover
@@ -213,10 +213,10 @@ def main():  # pragma: no cover
     # TODO: To adapt this code for it to work correctly with multiple json/test types from various dates
     orig_json_path = '<JSON_PATH>'
 
-    hunter_list_of_dicts = get_list_of_dict_from_json(orig_json_path)
+    hunter_list_of_dict = get_list_of_dict_from_json(orig_json_path)
 
     list_of_bad_highly_signif_changes_w_context = get_list_of_signif_changes_w_context(
-        hunter_list_of_dicts)
+        hunter_list_of_dict)
 
     initial_log_lines = ''
     path_to_log_file = Path(LOG_FILE_W_MSG)
@@ -230,12 +230,13 @@ def main():  # pragma: no cover
     )
 
     # Only create and send an email if there were any new changes detected
-    if new_changes_str is not None and new_changes_str != '':
-        # Strip newline symbol previously added on the left-hand side
-        new_changes_str = new_changes_str.lstrip('\n')
+    if new_changes_str != NEWLINE_SYMBOL:
+        if new_changes_str is not None and new_changes_str != '':
+            # Strip newline symbol previously added on the left-hand side
+            new_changes_str = new_changes_str.lstrip(NEWLINE_SYMBOL)
 
-        create_email_w_hunter_regressions(new_changes_str)
-        read_txt_send_email()
+            create_email_w_hunter_regressions(new_changes_str)
+            read_txt_send_email()
 
 
 if __name__ == '__main__':

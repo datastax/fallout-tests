@@ -107,3 +107,5 @@ TEMPLATE_MSG = 'Hello,\n\nPlease find the performance regressions detected ' \
 
 # Receiver's email address
 RECEIVER_EMAIL = '<EMAIL_ADDRESS>'
+
+NEWLINE_SYMBOL = '\n'

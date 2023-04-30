@@ -70,8 +70,6 @@ class TestUtils(unittest.TestCase):
 
     def test_get_list_of_dict_from_json(self):
         expected_output = [
-            {'test_type': '100-fixed', 'changes': 25},
-            {'test_type': '1000-fixed', 'changes': 30},
             {'test_type': '10000-fixed', 'changes': 35},
         ]
         result_output = get_list_of_dict_from_json(self.dummy_json_file_path)

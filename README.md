@@ -75,3 +75,6 @@ In future, this constant would be an input argument of a command line tool for e
 ### Linting the codes to create a csv for Hunter
 - Run `isort src` to ensure a correct and consistent order of imports across all `.py` files
 - Run `cd src` and then execute `autopep8 --in-place --recursive .` to ensure adherence to PEP-8 Python coding and styling standards
+
+### How to get the test coverage report with missing lines
+- Run `pytest --cov-report term-missing --cov=src tests/`
