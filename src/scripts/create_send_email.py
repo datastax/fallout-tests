@@ -238,15 +238,16 @@ def main():  # pragma: no cover
 
         new_changes_strings_list.append(new_changes_str)
 
-    new_changes_str_concat = ''.join(new_changes_strings_list)
-    # Only create and send an email if there were any new changes detected
-    if new_changes_str_concat != NEWLINE_SYMBOL:
-        if new_changes_str_concat is not None and new_changes_str_concat != '':
-            # Strip newline symbol previously added on the left-hand side
-            new_changes_str_concat = new_changes_str_concat.lstrip(NEWLINE_SYMBOL)
+    if new_changes_strings_list != [None]*len(new_changes_strings_list):
+        new_changes_str_concat = ''.join(new_changes_strings_list)
+        # Only create and send an email if there were any new changes detected
+        if new_changes_str_concat != NEWLINE_SYMBOL:
+            if new_changes_str_concat is not None and new_changes_str_concat != '':
+                # Strip newline symbol previously added on the left-hand side
+                new_changes_str_concat = new_changes_str_concat.lstrip(NEWLINE_SYMBOL)
 
-            create_email_w_hunter_regressions(new_changes_str_concat)
-            read_txt_send_email()
+                create_email_w_hunter_regressions(new_changes_str_concat)
+                read_txt_send_email()
 
 
 if __name__ == '__main__':
