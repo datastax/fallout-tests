@@ -2,6 +2,7 @@
 This is a python file to send email to the Cassandra mailing list if hunter detects performance regressions.
 """
 
+import collections
 import logging
 import os
 import smtplib
@@ -9,8 +10,6 @@ import sys
 from email.message import EmailMessage
 from pathlib import Path
 from typing import List
-
-import pandas as pd
 
 from src.scripts.constants import (HUNTER_CLONE_PROJ_DIR,
                                    LIST_OF_HUNTER_RESULTS_JSONS,
@@ -41,62 +40,55 @@ def get_list_of_signif_changes_w_context(
     Returns:
             A list of highly bad significant changes.
     """
+    unique_changes = set()
+    git_shas = {}
+
     for hunter_dict in hunter_results_list_of_dicts:
         test_type = next(iter(hunter_dict))
 
         if hunter_dict == {}:
             logging.info(
                 'No significant changes were detected for any metrics by hunter')
+            continue
+
         # A list of dictionaries, each of which corresponds to one date of significant
         # changes wrt metrics detected by hunter
         list_of_time_and_signif_changes = hunter_dict[test_type]
 
-        # Only bad changes beyond +/- % threshold
-        list_of_all_bad_highly_signif_changes_w_context = []
+        # For totalOps, opRate: bad changes would occur if their values decreased (i.e., the lower, the worse).
+        # For all other metrics (minLat, avgLat, medianLat, p95, p99, p99.9, maxLat, MAD, and IQR):
+        # bad changes would occur if their values increased (i.e., the higher, the worse, as higher latencies
+        # and higher variations/spread are detrimental to performance). Keeps only bad changes beyond +/- % threshold
+        list_of_all_bad_highly_signif_changes_w_context = [
+            f"For the test '{test_type}' on date and time '{dict_of_time_and_changes['time']}' that ran on "
+            f"cassandra Git commit SHA '{git_shas.get(date[0], get_git_sha_for_cassandra(date[0]))}' and on "
+            f"fallout-tests Git commit SHA '{git_shas.get(date[0], get_git_sha_for_fallout_tests(date[0]))}':\n\t "
+            f"The metric '{change['metric']}' changed by {change['forward_change_percent']}%.\n"
+            for dict_of_time_and_changes in list_of_time_and_signif_changes
+            for date in [dict_of_time_and_changes['time'].replace("-", "_").split(' ')]
+            for change in dict_of_time_and_changes['changes']
+            if (change['metric'].startswith('totalOps') or change['metric'].startswith('opRate')) and
+            float(change['forward_change_percent']) < -threshold or
+               (not change['metric'].startswith('totalOps') and not change['metric'].startswith('opRate')) and float(
+                change['forward_change_percent']) > threshold
+        ]
+
+        unique_changes.update(list_of_all_bad_highly_signif_changes_w_context)
+
         for dict_of_time_and_changes in list_of_time_and_signif_changes:
             date = dict_of_time_and_changes['time'].replace(
                 "-", "_").split(' ')
-            cass_git_sha = get_git_sha_for_cassandra(date[0])
-            fallout_tests_git_sha = get_git_sha_for_fallout_tests(date[0])
-            if dict_of_time_and_changes['changes'] == 0:
-                logging.info(f"There are no significant changes detected for the date and time "
-                             f"'{dict_of_time_and_changes['time']}'.")
+            git_shas[date[0]] = git_shas.get(
+                date[0], get_git_sha_for_cassandra(date[0]))
+            git_shas[date[0]] = git_shas.get(
+                date[0], get_git_sha_for_fallout_tests(date[0]))
 
-            for change in dict_of_time_and_changes['changes']:
-                significant_change_w_context = f"For the test '{test_type}' on date and time " \
-                                               f"'{dict_of_time_and_changes['time']}' that ran on cassandra Git " \
-                                               f"commit SHA '{cass_git_sha}' and on fallout-tests Git commit " \
-                                               f"SHA '{fallout_tests_git_sha}':\n\t " \
-                                               f"The metric '{change['metric']}' changed by " \
-                                               f"{change['forward_change_percent']}%.\n"
-                logging.info(significant_change_w_context)
+    counter_changes = collections.Counter(unique_changes)
+    dict_counter_changes = dict(counter_changes)
+    list_of_bad_highly_signif_changes = [
+        key for key, val in dict_counter_changes.items() if val == 1]
 
-                # For totalOps, opRate: bad changes would occur if their values decreased (i.e., the lower, the worse).
-                # For all other metrics (minLat, avgLat, medianLat, p95, p99, p99.9, maxLat, MAD, and IQR):
-                # bad changes would occur if their values increased (i.e., the higher, the worse, as higher latencies
-                # and higher variations/spread are detrimental to performance).
-                if change['metric'].startswith('totalOps') or change['metric'].startswith('opRate'):
-                    if float(change['forward_change_percent']) < -threshold:
-                        list_of_all_bad_highly_signif_changes_w_context.append(
-                            significant_change_w_context)
-
-                else:  # for all other metrics
-                    if float(change['forward_change_percent']) > threshold:
-                        list_of_all_bad_highly_signif_changes_w_context.append(
-                            significant_change_w_context)
-
-        all_bad_highly_signif_changes_combos_series = pd.Series(
-            list_of_all_bad_highly_signif_changes_w_context)
-        all_bad_highly_signif_changes_combos_and_freqs = all_bad_highly_signif_changes_combos_series.value_counts()
-
-        list_of_unique_all_bad_highly_signif_changes = []
-        for i in range(len(all_bad_highly_signif_changes_combos_and_freqs)):
-            if all_bad_highly_signif_changes_combos_and_freqs.iloc[i] == 1:
-                list_of_unique_all_bad_highly_signif_changes.append(
-                    all_bad_highly_signif_changes_combos_and_freqs.index[i]
-                )
-
-        return list_of_unique_all_bad_highly_signif_changes
+    return list_of_bad_highly_signif_changes
 
 
 def create_email_w_hunter_regressions(
@@ -216,7 +208,8 @@ def main():  # pragma: no cover
 
     list_of_paths_to_json = []
     for hunter_result_name in LIST_OF_HUNTER_RESULTS_JSONS:
-        list_of_paths_to_json.append(f'{HUNTER_CLONE_PROJ_DIR}{os.sep}{hunter_result_name}')
+        list_of_paths_to_json.append(
+            f'{HUNTER_CLONE_PROJ_DIR}{os.sep}{hunter_result_name}')
 
     new_changes_strings_list = []
     for orig_json_path in list_of_paths_to_json:
@@ -238,13 +231,14 @@ def main():  # pragma: no cover
 
         new_changes_strings_list.append(new_changes_str)
 
-    if new_changes_strings_list != [None]*len(new_changes_strings_list):
+    if new_changes_strings_list != [None] * len(new_changes_strings_list):
         new_changes_str_concat = ''.join(new_changes_strings_list)
         # Only create and send an email if there were any new changes detected
         if new_changes_str_concat != NEWLINE_SYMBOL:
             if new_changes_str_concat is not None and new_changes_str_concat != '':
                 # Strip newline symbol previously added on the left-hand side
-                new_changes_str_concat = new_changes_str_concat.lstrip(NEWLINE_SYMBOL)
+                new_changes_str_concat = new_changes_str_concat.lstrip(
+                    NEWLINE_SYMBOL)
 
                 create_email_w_hunter_regressions(new_changes_str_concat)
                 read_txt_send_email()

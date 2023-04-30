@@ -75,7 +75,7 @@ class TestCreateSendEmail(unittest.TestCase):
             dummy_hunter_results_list_of_dicts, threshold)
 
         self.assertIsInstance(result_output, list)
-        self.assertEqual(result_output, expected_output)
+        self.assertCountEqual(result_output, expected_output)
 
     def test_create_file_w_regressions_sent_by_email(self):
         # Create sample input lists
