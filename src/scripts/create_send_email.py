@@ -1,5 +1,6 @@
 """
-This is a python file to send email to the Cassandra mailing list if hunter detects performance regressions.
+This is a python file to send email to the Cassandra mailing list
+if hunter detects performance regressions.
 """
 
 import collections
@@ -51,25 +52,35 @@ def get_list_of_signif_changes_w_context(
                 'No significant changes were detected for any metrics by hunter')
             continue
 
-        # A list of dictionaries, each of which corresponds to one date of significant
-        # changes wrt metrics detected by hunter
+        # A list of dictionaries, each of which corresponds to one
+        # date of significant changes wrt metrics detected by hunter
         list_of_time_and_signif_changes = hunter_dict[test_type]
 
-        # For totalOps, opRate: bad changes would occur if their values decreased (i.e., the lower, the worse).
-        # For all other metrics (minLat, avgLat, medianLat, p95, p99, p99.9, maxLat, MAD, and IQR):
-        # bad changes would occur if their values increased (i.e., the higher, the worse, as higher latencies
-        # and higher variations/spread are detrimental to performance). Keeps only bad changes beyond +/- % threshold
+        # For totalOps, opRate: bad changes would occur if their
+        # values decreased (i.e., the lower, the worse).
+        # For all other metrics (minLat, avgLat, medianLat,
+        # p95, p99, p99.9, maxLat, MAD, and IQR):
+        # bad changes would occur if their values increased
+        # (i.e., the higher, the worse, as higher latencies
+        # and higher variations/spread are detrimental to performance).
+        # Keeps only bad changes beyond +/- % threshold
         list_of_all_bad_highly_signif_changes_w_context = [
-            f"For the test '{test_type}' on date and time '{dict_of_time_and_changes['time']}' that ran on "
-            f"cassandra Git commit SHA '{git_shas.get(date[0], get_git_sha_for_cassandra(date[0]))}' and on "
-            f"fallout-tests Git commit SHA '{git_shas.get(date[0], get_git_sha_for_fallout_tests(date[0]))}': "
-            f"The metric '{change['metric']}' changed by {change['forward_change_percent']}%.\n"
+            f"For the test '{test_type}' on date and time " \
+            f"'{dict_of_time_and_changes['time']}' that ran on "
+            f"cassandra Git commit SHA " \
+            f"'{git_shas.get(date[0], get_git_sha_for_cassandra(date[0]))}' " \
+            f"and on fallout-tests Git commit SHA " \
+            f"'{git_shas.get(date[0], get_git_sha_for_fallout_tests(date[0]))}': "
+            f"The metric '{change['metric']}' changed " \
+            f"by {change['forward_change_percent']}%.\n"
             for dict_of_time_and_changes in list_of_time_and_signif_changes
             for date in [dict_of_time_and_changes['time'].replace("-", "_").split(' ')]
             for change in dict_of_time_and_changes['changes']
-            if (change['metric'].startswith('totalOps') or change['metric'].startswith('opRate')) and
+            if (change['metric'].startswith('totalOps')
+                or change['metric'].startswith('opRate')) and
             float(change['forward_change_percent']) < -threshold or
-               (not change['metric'].startswith('totalOps') and not change['metric'].startswith('opRate')) and float(
+               (not change['metric'].startswith('totalOps')
+                and not change['metric'].startswith('opRate')) and float(
                 change['forward_change_percent']) > threshold
         ]
 
@@ -100,9 +111,11 @@ def create_email_w_hunter_regressions(
 
     Args:
         new_changes: str
-                   New bad/highly bad significant changes detected by hunter with context to be sent by email.
+                   New bad/highly bad significant changes detected
+                   by hunter with context to be sent by email.
         output_email_msg_path: str
-                            The path with file extension (.txt) to save the txt file of the entire email report.
+                            The path with file extension (.txt) to
+                            save the txt file of the entire email report.
     """
     # Write email content to txt file
     with open(output_email_msg_path, 'w') as text_file:
@@ -118,20 +131,25 @@ def create_file_w_regressions_sent_by_email(
         output_file: str = LOG_FILE_W_MSG
 ) -> str:
     """
-    Create log file with performance regressions detected by hunter and sent by email to avoid sending them again,
-    and adds new regressions to existing list of regressions if any.
+    Create log file with performance regressions detected by
+    hunter and sent by email to avoid sending them again,
+    and adds new regressions to existing list of regressions
+    if any.
 
     Args:
         bad_changes: List[str]
-            A list of highly bad significant changes detected by hunter with context.
+            A list of highly bad significant changes detected
+            by hunter with context.
         initial_lines: List[str]
             Initial lines in the log file (if any).
         output_file: str
-            The path with file extension (.txt) to save the regressions sent by email.
+            The path with file extension (.txt) to save the
+            regressions sent by email.
 
     Returns:
-        A string with new change/s detected to then be sent by email too (besides being added to the log file
-        for tracking purposes and to avoid sending it again later on).
+        A string with new change/s detected to then be sent by
+        email too (besides being added to the log file
+        for tracking purposes and to avoid sending it again).
     """
 
     new_changes = set(bad_changes) - set(initial_lines)
@@ -146,14 +164,16 @@ def create_file_w_regressions_sent_by_email(
 
 def read_txt_send_email() -> None:  # pragma: no cover
     """
-    Read message from a txt file with performance regressions detected by hunter and send it as an email.
+    Read message from a txt file with performance regressions
+    detected by hunter and send it as an email.
     """
     with open(TXT_FILE_W_MSG, 'r') as txt_file:
         # Create a text/plain message
         msg = EmailMessage()
         msg.set_content(txt_file.read())
 
-    keywords_changes = f'The most significant (+/- {THRESH_PERF_REGRESS}%) performance '
+    keywords_changes = f'The most significant ' \
+                       f'(+/- {THRESH_PERF_REGRESS}%) performance '
 
     # Set up email details
     secret_creds = get_aws_secrets()
@@ -164,17 +184,17 @@ def read_txt_send_email() -> None:  # pragma: no cover
     msg['To'] = send_to
 
     # Create a session to connect to 'server location' and 'port number'
-    s = smtplib.SMTP('smtp.gmail.com', 587)
+    session = smtplib.SMTP('smtp.gmail.com', 587)
     # Start TLS for security
-    s.starttls()
+    session.starttls()
 
     # Authentication and send email
     # (generate 16-digit pwd via Google acct as per
     # https://towardsdatascience.com/how-to-easily-automate-emails-with-python-8b476045c151#:~:text=with%20the%2016%2Dcharacter%20password)
-    s.login(secret_creds['username'], secret_creds['password'])
-    s.send_message(msg)
+    session.login(secret_creds['username'], secret_creds['password'])
+    session.send_message(msg)
 
-    s.quit()
+    session.quit()
 
 
 def main():  # pragma: no cover

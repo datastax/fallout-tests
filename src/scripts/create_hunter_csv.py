@@ -52,7 +52,8 @@ def extract_metrics_df(read_rel_dict: dict, write_rel_dict: dict) -> pd.DataFram
 
 def create_hunter_df(combined_columns_df: pd.DataFrame) -> pd.DataFrame:
     """
-    Creates a dataframe with only one row of values for both read and write with their respective column names.
+    Creates a dataframe with only one row of values for both read and
+    write with their respective column names.
 
     Args:
         combined_columns_df: pd.DataFrame
@@ -134,7 +135,8 @@ def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:
         # Get only read/write-result-success dictionaries.
         read_dict = get_relevant_dict(data, 'read')
         write_dict = get_relevant_dict(data, 'write')
-        # Get dataframe with relevant read/write column names, rename columns to shorten their names.
+        # Get dataframe with relevant read/write column names, rename
+        # columns to shorten their names.
         raw_hunter_metrics_df = extract_metrics_df(read_dict, write_dict)
         raw_hunter_metrics_df['opRate'] = raw_hunter_metrics_df['opRate'].str.rstrip(
             ' op/sec')
@@ -142,7 +144,8 @@ def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:
             if col_name not in ['totalOps', 'opRate']:
                 raw_hunter_metrics_df[col_name] = raw_hunter_metrics_df[col_name].str.rstrip(
                     ' ms')
-        # Get date from the json path (regardless of its positional index) and add time for compatibility with hunter.
+        # Get date from the json path (regardless of its positional index)
+        # and add time for compatibility with hunter.
         list_of_items_from_json_path = json_paths[0].split(os.sep)
 
         date_val = ''
@@ -171,7 +174,8 @@ def generate_hunter_df(json_paths: List[str]) -> pd.DataFrame:
 
 def get_hunter_df_w_test_type(json_paths: List[str]) -> Tuple[pd.DataFrame, str]:
     """
-    Get the dataframe to feed to hunter with performance results and the corresponding test type (e.g., 100/1000/10000
+    Get the dataframe to feed to hunter with performance results and
+    the corresponding test type (e.g., 100/1000/10000
     partitions and either 'fixed' or 'rated').
 
     Args:
@@ -206,10 +210,8 @@ if __name__ == '__main__':
     nightly_result_dates = os.listdir(NIGHTLY_RESULTS_DIR)
     nightly_result_dates.sort()
 
-    # Set to False if running this for the first time, then re-run and set to True.
-    is_case_prospective = PROSPECTIVE_MODE
     # Get path of previous csv files from retrospective
-    if is_case_prospective:
+    if PROSPECTIVE_MODE:
         csv_file_paths = []
         for csv_file_name in LIST_OF_CSV_NAMES:
             csv_file_paths.append(
@@ -227,8 +229,10 @@ if __name__ == '__main__':
             0].replace('-', '_')
 
         if test_input_date == last_date_from_csv:
-            raise ValueError(f"The test results for the date '{test_input_date}' were already run and summarised "
-                             f"in the csv file. Please ensure the date considered is not in the csv file and it is "
+            raise ValueError(f"The test results for the date '{test_input_date}' "
+                             f"were already run and summarised "
+                             f"in the csv file. Please ensure the date considered "
+                             f"is not in the csv file and it is "
                              f"past the latest date in the csv file.")
 
         # Get path to the latest test run
@@ -259,10 +263,10 @@ if __name__ == '__main__':
                     concat_df = pd.concat([hunter_df, list_of_hunter_df[i]])
                     concat_hunter_data_frames[test_partition] = concat_df
                     break
-                else:
-                    get_error_log(test_type)
+                get_error_log(test_type)
 
-        # Save two versions of the df: 1) with the Cassandra git shas only (for hunter), 2) with two git shas (of the
+        # Save two versions of the df: 1) with the Cassandra git shas
+        # only (for hunter), 2) with two git shas (of the
         # Cassandra and fallout-tests repos) for auditability
         for i, test_name in enumerate(LWT_TESTS_NAMES):
             for substr_test_name in SUBSTR_TESTS_NAMES:
@@ -270,17 +274,20 @@ if __name__ == '__main__':
                     df_w_two_git_sha = concat_hunter_data_frames[substr_test_name]
                     save_df_to_csv(
                         df_w_two_git_sha,
-                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{HUNTER_PREFIX}{test_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}'
+                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{HUNTER_PREFIX}'
+                        f'{test_name}{TWO_GIT_SHA_SUFFIX}{HUNTER_FILE_FMT}'
                     )
                     df_w_one_git_sha = df_w_two_git_sha.drop(
                         FALLOUT_TESTS_COL_NAME, axis=1)
                     save_df_to_csv(
                         df_w_one_git_sha,
-                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}{HUNTER_PREFIX}{test_name}{HUNTER_FILE_FMT}'
+                        f'{HUNTER_CSV_PROJ_DIR}{os.sep}'
+                        f'{HUNTER_PREFIX}{test_name}{HUNTER_FILE_FMT}'
                     )
 
     else:
-        hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated, hunter_df_10000_fixed, \
+        hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, \
+            hunter_df_1000_rated, hunter_df_10000_fixed, \
             hunter_df_10000_rated, types_of_tests = [], [], [], [], [], [], []
         for input_date in nightly_result_dates:
             for test_json_path in get_paths_to_json(f'{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}'):
@@ -304,16 +311,20 @@ if __name__ == '__main__':
                     get_error_log(type_of_test)
 
         # Create a list of lists of dfs from 6 lists of dfs
-        hunter_dfs = [hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated,
+        hunter_dfs = [hunter_df_100_fixed, hunter_df_100_rated,
+                      hunter_df_1000_fixed, hunter_df_1000_rated,
                       hunter_df_10000_fixed, hunter_df_10000_rated]
 
-        # Create a concatenated df from the above list of lists of dfs and extracts it into 6 different dfs
+        # Create a concatenated df from the above list of lists of
+        # dfs and extracts it into 6 different dfs
         for i, hunter_df in enumerate(hunter_dfs):
             hunter_dfs[i] = pd.concat(hunter_df)
-        hunter_df_100_fixed, hunter_df_100_rated, hunter_df_1000_fixed, hunter_df_1000_rated, hunter_df_10000_fixed, \
-            hunter_df_10000_rated = hunter_dfs
+        hunter_df_100_fixed, hunter_df_100_rated, \
+            hunter_df_1000_fixed, hunter_df_1000_rated, \
+            hunter_df_10000_fixed, hunter_df_10000_rated = hunter_dfs
 
-        # Save two versions of the df: 1) with the Cassandra git shas only (for hunter), 2) with two git shas (of the
+        # Save two versions of the df: 1) with the Cassandra git shas
+        # only (for hunter), 2) with two git shas (of the
         # Cassandra and fallout-tests repos) for auditability
         unique_types_of_tests = pd.Series(types_of_tests).unique()
         subset_names_w_dfs = {

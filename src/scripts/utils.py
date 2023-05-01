@@ -88,7 +88,8 @@ def get_git_sha_for_cassandra(input_date: str) -> str:  # pragma: no cover
     list_of_log_file_path = []
     for _ in LWT_TESTS_NAMES:
         log_files_list = glob.glob(
-            f"{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}{os.sep}{'**/performance-tester-dc1-default-sts-0/logs.txt'}",
+            f"{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}{os.sep}"
+            f"{'**/performance-tester-dc1-default-sts-0/logs.txt'}",
             recursive=True
         )
         for log_file_path in log_files_list:
@@ -101,19 +102,21 @@ def get_git_sha_for_cassandra(input_date: str) -> str:  # pragma: no cover
             git_sha = content.split('Git SHA: ')[1].split(NEWLINE_SYMBOL)[0]
             git_sha_list.append(git_sha)
 
-    # Get the first non-empty Git sha as the final one, as at times one subtest may not yield results, whilst
+    # Get the first non-empty Git sha as the final one, as at
+    # times one subtest may not yield results, whilst
     # another one (or all others) may.
     final_cass_sha = ''
-    for i in range(len(git_sha_list)):
-        if git_sha_list[i] != '':
-            final_cass_sha = git_sha_list[i]
+    for _, git_sha_elem in enumerate(git_sha_list):
+        if git_sha_elem != '':
+            final_cass_sha = git_sha_elem
             break
     return final_cass_sha
 
 
 def get_git_sha_for_fallout_tests(input_date: str) -> str:  # pragma: no cover
     """
-    Get the Git sha of the fallout-tests repo for a given date from a fallout-tests_git_sha.log file.
+    Get the Git sha of the fallout-tests repo for a given
+    date from a fallout-tests_git_sha.log file.
 
     Args:
         input_date: str
@@ -138,23 +141,32 @@ def get_git_sha_for_fallout_tests(input_date: str) -> str:  # pragma: no cover
     with open(fallout_tests_log_file_list[0], 'r') as text:
         content = ' '.join(text.readlines())
         # The 1st element is the Git sha, the 2nd is the datetime
-        final_fallout_tests_sha = content.split(',')[0]
+        final_fallout_tests_sha = content.split(',', maxsplit=1)[0]
     return final_fallout_tests_sha
 
 
 def get_error_log(test_type: str) -> None:  # pragma: no cover
-    logging.error(f"The type of test '{test_type}' is not supported; please ensure you use either "
-                  f"of the following numbers of partitions (either fixed or rated): 100, 1000, "
-                  f"or 10000.")
+    """
+    Log an error if the test_type were not supported.
+
+    Args:
+        test_type: str
+                A test type to be logged.
+    """
+    logging.error("The type of test '%s' is not supported; please ensure you use either "
+                  "of the following numbers of partitions (either fixed or rated): 100, 1000, "
+                  "or 10000.", test_type)
 
 
 def get_relevant_dict(dict_of_dicts: dict, test_phase: str) -> dict:
     """
-    Get the relevant dictionary (e.g., read- or write-related) from a dictionary of dictionaries.
+    Get the relevant dictionary (e.g., read- or write-related) from
+    a dictionary of dictionaries.
 
     Args:
         dict_of_dicts: dict
-                    A dictionary of dictionaries, each of which hosts the results from a test run (e.g., read or write).
+                    A dictionary of dictionaries, each of which hosts
+                    the results from a test run (e.g., read or write).
         test_phase: str
             The test phase of interest, i.e., 'read' or 'write'.
 
@@ -203,10 +215,10 @@ def get_aws_secrets() -> dict:  # pragma: no cover
         get_secret_value_response = client.get_secret_value(
             SecretId=secret_name
         )
-    except ClientError as e:
+    except ClientError as client_exception:
         # For a list of exceptions thrown, see
         # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
-        raise e
+        raise client_exception
 
     secrets_dict = json.loads(get_secret_value_response['SecretString'])
     return secrets_dict
@@ -214,7 +226,8 @@ def get_aws_secrets() -> dict:  # pragma: no cover
 
 def get_list_of_dict_from_json(file_path: str) -> List[dict]:
     """
-    Get list of dictionaries, e.g., results from hunter on performance regressions, from a json file.
+    Get list of dictionaries, e.g., results from hunter on
+    performance regressions, from a json file.
 
     Args:
         file_path: str

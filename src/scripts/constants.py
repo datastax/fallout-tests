@@ -49,6 +49,7 @@ SUBSTR_TESTS_NAMES = [
 
 LWT_TEST_RUN_EXEC_TIME = '23:00:00'
 
+# Set to False only if generating hunter csv for the first time.
 PROSPECTIVE_MODE = True
 
 # Metrics' columns for Hunter
@@ -112,6 +113,7 @@ RECEIVER_EMAIL = '<EMAIL_ADDRESS>'
 NEWLINE_SYMBOL = '\n'
 
 LIST_OF_HUNTER_RESULTS_JSONS = [
-    'hunter_result_fixed_100.json', 'hunter_result_fixed_1000.json', 'hunter_result_fixed_10000.json',
-    'hunter_result_rated_100.json', 'hunter_result_rated_1000.json', 'hunter_result_rated_10000.json'
+    'hunter_result_fixed_100.json', 'hunter_result_fixed_1000.json',
+    'hunter_result_fixed_10000.json', 'hunter_result_rated_100.json',
+    'hunter_result_rated_1000.json', 'hunter_result_rated_10000.json'
 ]
