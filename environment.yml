@@ -14,5 +14,4 @@ dependencies:
   - pytest-cov=4.0.0
   - pip=23.0.1
   - pip:
-     - setuptools==66.0.0
      - -e .
