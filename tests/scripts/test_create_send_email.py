@@ -12,7 +12,7 @@ class TestCreateSendEmail(unittest.TestCase):
         """Create a temporary log file for testing"""
         self.test_file_path = 'test_log_file.txt'
         with open(self.test_file_path, 'w') as f:
-            f.write('Initial line in the log file\n')
+            f.write('')
 
     def tearDown(self):
         """Remove the temporary file after testing"""
@@ -46,28 +46,28 @@ class TestCreateSendEmail(unittest.TestCase):
 
         # Define the expected output
         expected_output = ["For the test 'lwt-fixed-100-partitions' on date and time '2022-01-01 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'avgLat' changed by 20%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-01 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'p99' changed by 30%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-01 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'opRate' changed by -20%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-01 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'p95' changed by 25%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-01 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'maxLat' changed by 50%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-02 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'p99' changed by 15%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-02 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'p95' changed by 15%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-02 23:00:00' that "
-                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '':\n\t "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'maxLat' changed by 30%.\n"]
 
         # Call the function and check the output
@@ -81,12 +81,11 @@ class TestCreateSendEmail(unittest.TestCase):
         # Create sample input lists
         list_of_bad_highly_signif_changes_w_context = [
             "For the test 'test_type_1' on date and time '2022-01-02 23:00:00' that ran on cassandra Git commit SHA "
-            "'None' and on fallout-tests Git commit SHA 'None':\n\t The metric 'avgLat' changed by 20.0%.\n",
+            "'None' and on fallout-tests Git commit SHA 'None': The metric 'avgLat' changed by 20.0%.\n",
         ]
         initial_lines_in_log = [
-            'Initial line in the log file\n',
             "For the test 'test_type_2' on date and time '2022-01-01 23:00:00' that ran on cassandra Git commit SHA "
-            "'None' and on fallout-tests Git commit SHA 'None':\n\t The metric 'opRate' changed by -20.0%.\n",
+            "'None' and on fallout-tests Git commit SHA 'None': The metric 'opRate' changed by -20.0%.\n",
         ]
         output_log_file_path = self.test_file_path
 
@@ -97,22 +96,19 @@ class TestCreateSendEmail(unittest.TestCase):
         # Check that the log file was updated correctly
         with open(output_log_file_path, 'r') as f:
             log_file_content = f.read()
-        first_str = 'Initial line in the log file'
-        second_str = '\n\n'
-        third_str = "For the test 'test_type_1' on date and time '2022-01-02 23:00:00' that ran on cassandra Git " \
-                    "commit SHA 'None' and on fallout-tests Git commit SHA 'None':"
-        fourth_str = '\n\t '
-        fifth_str = "The metric 'avgLat' changed by 20.0%."
-        sixth_str = '\n'
 
-        expected_log_file_content = f'{first_str}{second_str}{third_str}{fourth_str}{fifth_str}{sixth_str}'
+        first_str = "For the test 'test_type_1' on date and time '2022-01-02 23:00:00' that ran "
+        second_str = "on cassandra Git commit SHA 'None' and on fallout-tests Git commit SHA 'None': "
+        third_str = "The metric 'avgLat' changed by 20.0%.\n"
+
+        expected_log_file_content = f'{first_str}{second_str}{third_str}'
 
         self.assertIsInstance(log_file_content, str)
         self.assertEqual(log_file_content, expected_log_file_content)
 
         # Check that the function output is correct
         expected_output = (
-            "\nFor the test 'test_type_1' on date and time '2022-01-02 23:00:00' that ran on cassandra Git commit SHA "
-            "'None' and on fallout-tests Git commit SHA 'None':\n\t The metric 'avgLat' changed by 20.0%.\n"
+            "For the test 'test_type_1' on date and time '2022-01-02 23:00:00' that ran on cassandra Git commit SHA "
+            "'None' and on fallout-tests Git commit SHA 'None': The metric 'avgLat' changed by 20.0%.\n"
         )
         self.assertEqual(result_output, expected_output)

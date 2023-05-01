@@ -62,7 +62,7 @@ def get_list_of_signif_changes_w_context(
         list_of_all_bad_highly_signif_changes_w_context = [
             f"For the test '{test_type}' on date and time '{dict_of_time_and_changes['time']}' that ran on "
             f"cassandra Git commit SHA '{git_shas.get(date[0], get_git_sha_for_cassandra(date[0]))}' and on "
-            f"fallout-tests Git commit SHA '{git_shas.get(date[0], get_git_sha_for_fallout_tests(date[0]))}':\n\t "
+            f"fallout-tests Git commit SHA '{git_shas.get(date[0], get_git_sha_for_fallout_tests(date[0]))}': "
             f"The metric '{change['metric']}' changed by {change['forward_change_percent']}%.\n"
             for dict_of_time_and_changes in list_of_time_and_signif_changes
             for date in [dict_of_time_and_changes['time'].replace("-", "_").split(' ')]
@@ -113,59 +113,35 @@ def create_email_w_hunter_regressions(
 
 
 def create_file_w_regressions_sent_by_email(
-        list_of_bad_highly_signif_changes_w_context: List[str],
-        initial_lines_in_log: List[str],
-        output_log_file_path: str = LOG_FILE_W_MSG
+        bad_changes: List[str],
+        initial_lines: List[str],
+        output_file: str = LOG_FILE_W_MSG
 ) -> str:
     """
     Create log file with performance regressions detected by hunter and sent by email to avoid sending them again,
     and adds new regressions to existing list of regressions if any.
 
     Args:
-        list_of_bad_highly_signif_changes_w_context: List[str]
-                                            A list of highly bad significant changes detected by hunter with context.
-        initial_lines_in_log: List[str]
-                            Initial lines in the log file (if any).
-        output_log_file_path: str
-                            The path with file extension (.txt) to save the regressions sent by email.
+        bad_changes: List[str]
+            A list of highly bad significant changes detected by hunter with context.
+        initial_lines: List[str]
+            Initial lines in the log file (if any).
+        output_file: str
+            The path with file extension (.txt) to save the regressions sent by email.
 
     Returns:
-            A string with new change/s detected to then be sent by email too (besides being added to the log file
-            for tracking purposes and to avoid sending it again later on).
+        A string with new change/s detected to then be sent by email too (besides being added to the log file
+        for tracking purposes and to avoid sending it again later on).
     """
-    # Write log content to txt file (use append/'a' mode not to overwrite the previous contents with mode 'w' otherwise)
-    with open(output_log_file_path, 'a') as text_file:
-        text_to_add = NEWLINE_SYMBOL.join(
-            list_of_bad_highly_signif_changes_w_context)
-        initial_lines_in_log_joined = ''.join(initial_lines_in_log)
 
-        # Skip initial newline not to create an unnecessary empty line at the top of the log file
-        initial_lines_in_log_joined = initial_lines_in_log_joined.lstrip(
-            NEWLINE_SYMBOL)
-        text_to_add = text_to_add.lstrip(NEWLINE_SYMBOL)
+    new_changes = set(bad_changes) - set(initial_lines)
 
-        # Only add new regressions (not to duplicate the old regressions)
-        new_changes = []
-        for item_list in text_to_add.split('\n\n'):
-            if item_list not in initial_lines_in_log_joined:
-                new_changes.append(item_list)
+    if new_changes:
+        with open(output_file, 'a') as file:
+            new_changes_str = ''.join(new_changes)
+            file.write(new_changes_str)
 
-        new_changes = '\n\n'.join(new_changes)
-
-        # Add newline at the beginning of the new changes to then concatenate it with the previous ones consistently
-        new_changes = f'{NEWLINE_SYMBOL}{new_changes}'
-
-        if new_changes != NEWLINE_SYMBOL:
-            if initial_lines_in_log_joined != text_to_add:
-                if text_to_add != '':
-                    # If some regressions were already in the log file (from previous runs), add new regressions
-                    if len(initial_lines_in_log) != 0 or initial_lines_in_log_joined != '':
-                        text_to_add = new_changes
-
-                    # Insert list of performance regression sent by email
-                    text_file.writelines(text_to_add)
-
-                    return new_changes
+        return new_changes_str
 
 
 def read_txt_send_email() -> None:  # pragma: no cover
