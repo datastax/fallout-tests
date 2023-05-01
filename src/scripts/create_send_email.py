@@ -8,7 +8,7 @@ import os
 import smtplib
 import sys
 from email.message import EmailMessage
-from pathlib import Path
+
 from typing import List
 
 from src.scripts.constants import (HUNTER_CLONE_PROJ_DIR,
@@ -181,43 +181,27 @@ def main():  # pragma: no cover
     """
     Get performance regressions detected by hunter and send them via one email
     """
-
-    list_of_paths_to_json = []
-    for hunter_result_name in LIST_OF_HUNTER_RESULTS_JSONS:
-        list_of_paths_to_json.append(
-            f'{HUNTER_CLONE_PROJ_DIR}{os.sep}{hunter_result_name}')
-
     new_changes_strings_list = []
-    for orig_json_path in list_of_paths_to_json:
+    for hunter_result_name in LIST_OF_HUNTER_RESULTS_JSONS:
+        orig_json_path = f'{HUNTER_CLONE_PROJ_DIR}{os.sep}{hunter_result_name}'
         hunter_list_of_dict = get_list_of_dict_from_json(orig_json_path)
-
         list_of_bad_highly_signif_changes_w_context = get_list_of_signif_changes_w_context(
             hunter_list_of_dict)
-
-        initial_log_lines = ''
-        path_to_log_file = Path(LOG_FILE_W_MSG)
-        if path_to_log_file.exists():
-            with open(LOG_FILE_W_MSG, 'r') as log_txt_file:
-                initial_log_lines = log_txt_file.readlines()
-
+        with open(LOG_FILE_W_MSG, 'r') as log_txt_file:
+            initial_log_lines = log_txt_file.readlines()
         new_changes_str = create_file_w_regressions_sent_by_email(
             list_of_bad_highly_signif_changes_w_context,
             initial_log_lines
         )
+        if new_changes_str:
+            new_changes_strings_list.append(new_changes_str)
 
-        new_changes_strings_list.append(new_changes_str)
-
-    if new_changes_strings_list != [None] * len(new_changes_strings_list):
-        new_changes_str_concat = ''.join(new_changes_strings_list)
-        # Only create and send an email if there were any new changes detected
-        if new_changes_str_concat != NEWLINE_SYMBOL:
-            if new_changes_str_concat is not None and new_changes_str_concat != '':
-                # Strip newline symbol previously added on the left-hand side
-                new_changes_str_concat = new_changes_str_concat.lstrip(
-                    NEWLINE_SYMBOL)
-
-                create_email_w_hunter_regressions(new_changes_str_concat)
-                read_txt_send_email()
+    # Only create and send an email if there were any new changes detected
+    new_changes_str_concat = ''.join(
+        new_changes_strings_list).lstrip(NEWLINE_SYMBOL)
+    if new_changes_str_concat:
+        create_email_w_hunter_regressions(new_changes_str_concat)
+        read_txt_send_email()
 
 
 if __name__ == '__main__':
