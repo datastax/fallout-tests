@@ -11,7 +11,7 @@ setup(
         "boto3==1.24.28",
         "isort==5.9.3",
         "pandas==1.4.2",
-        "pylint=2.16.2",
+        "pylint==2.16.2",
         "pytest==7.2.2",
         "pytest-cov==4.0.0",
         "pip==23.0.1"
