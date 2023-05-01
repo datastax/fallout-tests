@@ -54,7 +54,7 @@ template-params        Template params for test-yaml-file in the form
 It finds change-points and notifies about possible performance regressions.
 
 ### Prospective and retrospective analyses
-The Python script `src/scripts/hunter_csv/create_hunter_csv.py` can be run in two ways based on the constant `PROSPECTIVE_MODE` set in the file `src/scripts/constants.py`: 
+The Python script `src/scripts/create_hunter_csv.py` can be run in two ways based on the constant `PROSPECTIVE_MODE` set in the file `src/scripts/constants.py`: 
 - if `False`, a retrospective analysis would be carried out to generate one df and corresponding csv file for each test type that groups performance results already exported on a nightly basis from previous dates;
 - if `True` (by default), a prospective analysis would be performed wherein only the current/ latest test run's results are taken and concatenated to the above results from the 
 retrospective analysis on a nightly basis.
@@ -69,11 +69,11 @@ In future, this constant would be an input argument of a command line tool for e
 - Run `pip install -e .` to use the `setup.py` and install the codes as a Python package in editable mode
 
 ### How to generate a csv for Hunter
-- Run `python src/scripts/hunter_csv/create_hunter_csv.py`
+- Run `python src/scripts/create_hunter_csv.py`
 - 6 csv files will be output in the top-level directory, which can be fed to Hunter (one at a time for each type of test)
 
 ### How to send an email report with performance regressions
-- Run `python src/scripts/cassandra_email/create_send_email.py`
+- Run `python src/scripts/create_send_email.py`
 
 ### Linting the codes to create a csv for Hunter
 - Run `isort src` to ensure a correct and consistent order of imports across all `.py` files
@@ -81,3 +81,7 @@ In future, this constant would be an input argument of a command line tool for e
 
 ### How to get the test coverage report with missing lines
 - Run `pytest --cov-report term-missing --cov=src tests/`
+
+### GitHub Actions
+An assessment of code quality and running unit tests via `pylint` and `pytest` respectively are automated via 
+GitHub Actions upon every push.
