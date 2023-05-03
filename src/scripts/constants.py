@@ -95,7 +95,7 @@ REGION_NAME = '<REGION_NAME>'
 SECRET_NAME = '<SECRET_NAME>'
 
 # Thresholds for sending email
-THRESH_PERF_REGRESS = 11  # Determined based on retro analysis on Apr 16th, 2023
+THRESH_PERF_REGRESS = 11  #  A threshold above or below (+/-) which significant changes are reported
 
 # Filename for sending email
 TXT_FILE_W_MSG = 'email_report.txt'
