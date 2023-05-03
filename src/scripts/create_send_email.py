@@ -29,17 +29,17 @@ def get_list_of_signif_changes_w_context(
         threshold: float = THRESH_PERF_REGRESS
 ) -> List[str]:
     """
-    Get a list of highly (above or below on a threshold) bad significant changes detected by hunter
+    Get a list of significant (above or below on a threshold) changes detected by hunter
     with context.
 
     Args:
         hunter_results_list_of_dicts: List[dict[List[dict]]]
                                     A list of dictionaries from hunter results.
         threshold: float
-                A threshold above or below (+/-) which highly bad significant changes are detected.
+                A threshold above or below (+/-) which significant changes are detected.
 
     Returns:
-            A list of highly bad significant changes.
+            A list of significant changes.
     """
     unique_changes = set()
     git_shas = {}
@@ -56,15 +56,8 @@ def get_list_of_signif_changes_w_context(
         # detected by hunter
         list_of_time_and_signif_changes = hunter_dict[test_type]
 
-        # For totalOps, opRate: bad changes would occur if their
-        # values decreased (i.e., the lower, the worse).
-        # For all other metrics (minLat, avgLat, medianLat,
-        # p95, p99, p99.9, maxLat, MAD, and IQR):
-        # bad changes would occur if their values increased
-        # (i.e., the higher, the worse, as higher latencies
-        # and higher variations/spread are detrimental to performance).
-        # Keeps only bad changes beyond +/- % threshold
-        list_of_all_bad_highly_signif_changes_w_context = [
+        # Keeps only significant changes beyond +/- % threshold
+        list_of_signif_changes_w_context = [
             f"For the test '{test_type}' on date and time " \
             f"'{dict_of_time_and_changes['time']}' that ran on "
             f"cassandra Git commit SHA " \
@@ -84,7 +77,7 @@ def get_list_of_signif_changes_w_context(
                 change['forward_change_percent']) > threshold
         ]
 
-        unique_changes.update(list_of_all_bad_highly_signif_changes_w_context)
+        unique_changes.update(list_of_signif_changes_w_context)
 
         for dict_of_time_and_changes in list_of_time_and_signif_changes:
             date = dict_of_time_and_changes['time'].replace(
@@ -96,10 +89,10 @@ def get_list_of_signif_changes_w_context(
 
     counter_changes = collections.Counter(unique_changes)
     dict_counter_changes = dict(counter_changes)
-    list_of_bad_highly_signif_changes = [
+    list_of_signif_changes = [
         key for key, val in dict_counter_changes.items() if val == 1]
 
-    return list_of_bad_highly_signif_changes
+    return list_of_signif_changes
 
 
 def create_email_w_hunter_regressions(
@@ -111,7 +104,7 @@ def create_email_w_hunter_regressions(
 
     Args:
         new_changes: str
-                   New bad/highly bad significant changes detected
+                   New significant changes detected
                    by hunter with context to be sent by email.
         output_email_msg_path: str
                             The path with file extension (.txt) to
@@ -126,7 +119,7 @@ def create_email_w_hunter_regressions(
 
 
 def create_file_w_regressions_sent_by_email(
-        bad_changes: List[str],
+        signif_changes: List[str],
         initial_lines: List[str],
         output_file: str = LOG_FILE_W_MSG
 ) -> str:
@@ -137,8 +130,8 @@ def create_file_w_regressions_sent_by_email(
     if any.
 
     Args:
-        bad_changes: List[str]
-            A list of highly bad significant changes detected
+        signif_changes: List[str]
+            A list of significant changes detected
             by hunter with context.
         initial_lines: List[str]
             Initial lines in the log file (if any).
@@ -152,7 +145,7 @@ def create_file_w_regressions_sent_by_email(
         for tracking purposes and to avoid sending it again).
     """
 
-    new_changes = set(bad_changes) - set(initial_lines)
+    new_changes = set(signif_changes) - set(initial_lines)
 
     if new_changes:
         with open(output_file, 'a') as file:
@@ -205,12 +198,12 @@ def main():  # pragma: no cover
     for hunter_result_name in LIST_OF_HUNTER_RESULTS_JSONS:
         orig_json_path = f'{HUNTER_CLONE_PROJ_DIR}{os.sep}{hunter_result_name}'
         hunter_list_of_dict = get_list_of_dict_from_json(orig_json_path)
-        list_of_bad_highly_signif_changes_w_context = get_list_of_signif_changes_w_context(
+        list_of_signif_changes_w_context = get_list_of_signif_changes_w_context(
             hunter_list_of_dict)
         with open(LOG_FILE_W_MSG, 'r') as log_txt_file:
             initial_log_lines = log_txt_file.readlines()
         new_changes_str = create_file_w_regressions_sent_by_email(
-            list_of_bad_highly_signif_changes_w_context,
+            list_of_signif_changes_w_context,
             initial_log_lines
         )
         if new_changes_str:

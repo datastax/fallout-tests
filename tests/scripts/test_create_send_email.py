@@ -79,7 +79,7 @@ class TestCreateSendEmail(unittest.TestCase):
 
     def test_create_file_w_regressions_sent_by_email(self):
         # Create sample input lists
-        list_of_bad_highly_signif_changes_w_context = [
+        list_of_signif_changes_w_context = [
             "For the test 'test_type_1' on date and time '2022-01-02 23:00:00' that ran on cassandra Git commit SHA "
             "'None' and on fallout-tests Git commit SHA 'None': The metric 'avgLat' changed by 20.0%.\n",
         ]
@@ -91,7 +91,7 @@ class TestCreateSendEmail(unittest.TestCase):
 
         # Call the function and check the output
         result_output = create_file_w_regressions_sent_by_email(
-            list_of_bad_highly_signif_changes_w_context, initial_lines_in_log, output_log_file_path)
+            list_of_signif_changes_w_context, initial_lines_in_log, output_log_file_path)
 
         # Check that the log file was updated correctly
         with open(output_log_file_path, 'r') as f:
