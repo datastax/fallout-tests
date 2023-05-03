@@ -58,23 +58,18 @@ def get_list_of_signif_changes_w_context(
 
         # Keeps only significant changes beyond +/- % threshold
         list_of_signif_changes_w_context = [
-            f"For the test '{test_type}' on date and time " \
+            f"For the test '{test_type}' on date and time "
             f"'{dict_of_time_and_changes['time']}' that ran on "
-            f"cassandra Git commit SHA " \
-            f"'{git_shas.get(date[0], get_git_sha_for_cassandra(date[0]))}' " \
-            f"and on fallout-tests Git commit SHA " \
+            f"cassandra Git commit SHA "
+            f"'{git_shas.get(date[0], get_git_sha_for_cassandra(date[0]))}' "
+            f"and on fallout-tests Git commit SHA "
             f"'{git_shas.get(date[0], get_git_sha_for_fallout_tests(date[0]))}': "
-            f"The metric '{change['metric']}' changed " \
+            f"The metric '{change['metric']}' changed "
             f"by {change['forward_change_percent']}%.\n"
             for dict_of_time_and_changes in list_of_time_and_signif_changes
             for date in [dict_of_time_and_changes['time'].replace("-", "_").split(' ')]
             for change in dict_of_time_and_changes['changes']
-            if (change['metric'].startswith('totalOps')
-                or change['metric'].startswith('opRate')) and
-            float(change['forward_change_percent']) < -threshold or
-               (not change['metric'].startswith('totalOps')
-                and not change['metric'].startswith('opRate')) and float(
-                change['forward_change_percent']) > threshold
+            if abs(float(change['forward_change_percent'])) > threshold
         ]
 
         unique_changes.update(list_of_signif_changes_w_context)

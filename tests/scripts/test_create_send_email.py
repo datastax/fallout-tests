@@ -27,14 +27,14 @@ class TestCreateSendEmail(unittest.TestCase):
                     {'metric': 'avgLat', 'forward_change_percent': '20'},
                     {'metric': 'p99', 'forward_change_percent': '30'},
                     {'metric': 'opRate', 'forward_change_percent': '-20'},
-                    {'metric': 'p95', 'forward_change_percent': '25'},
+                    {'metric': 'p95', 'forward_change_percent': '-25'},
                     {'metric': 'maxLat', 'forward_change_percent': '50'},
                 ]},
                 {'time': '2022-01-02 23:00:00', 'changes': [
                     {'metric': 'totalOps', 'forward_change_percent': '-5'},
                     {'metric': 'avgLat', 'forward_change_percent': '10'},
                     {'metric': 'p99', 'forward_change_percent': '15'},
-                    {'metric': 'opRate', 'forward_change_percent': '-10'},
+                    {'metric': 'opRate', 'forward_change_percent': '15'},
                     {'metric': 'p95', 'forward_change_percent': '15'},
                     {'metric': 'maxLat', 'forward_change_percent': '30'}
                 ]},
@@ -56,13 +56,16 @@ class TestCreateSendEmail(unittest.TestCase):
                            "The metric 'opRate' changed by -20%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-01 23:00:00' that "
                            "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
-                           "The metric 'p95' changed by 25%.\n",
+                           "The metric 'p95' changed by -25%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-01 23:00:00' that "
                            "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'maxLat' changed by 50%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-02 23:00:00' that "
                            "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'p99' changed by 15%.\n",
+                           "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-02 23:00:00' that "
+                           "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
+                           "The metric 'opRate' changed by 15%.\n",
                            "For the test 'lwt-fixed-100-partitions' on date and time '2022-01-02 23:00:00' that "
                            "ran on cassandra Git commit SHA '' and on fallout-tests Git commit SHA '': "
                            "The metric 'p95' changed by 15%.\n",
