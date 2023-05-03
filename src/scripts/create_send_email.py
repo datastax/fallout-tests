@@ -45,12 +45,11 @@ def get_list_of_signif_changes_w_context(
     git_shas = {}
 
     for hunter_dict in hunter_results_list_of_dicts:
-        test_type = next(iter(hunter_dict))
-
         if hunter_dict == {}:
             logging.info(
                 'No significant changes were detected for any metrics by hunter')
             continue
+        test_type = next(iter(hunter_dict))
 
         # A list of dictionaries, each of which corresponds to one
         # date of significant changes wrt metrics detected by hunter
