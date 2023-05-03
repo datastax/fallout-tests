@@ -52,7 +52,8 @@ def get_list_of_signif_changes_w_context(
         test_type = next(iter(hunter_dict))
 
         # A list of dictionaries, each of which corresponds to one
-        # date of significant changes wrt metrics detected by hunter
+        # date and time (with timezone) of significant changes wrt metrics
+        # detected by hunter
         list_of_time_and_signif_changes = hunter_dict[test_type]
 
         # For totalOps, opRate: bad changes would occur if their
