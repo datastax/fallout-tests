@@ -1,12 +1,26 @@
+import os
 import unittest
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
-from src.scripts.utils import add_suffix_to_col, get_relevant_dict
+from src.scripts.utils import (add_suffix_to_col, get_list_of_dict_from_json,
+                               get_relevant_dict)
 
 
 class TestUtils(unittest.TestCase):
+
+    def setUp(self):
+        """Create a dummy JSON file for testing"""
+        self.dummy_json_file_path = 'dummy_hunter.json'
+        with open(self.dummy_json_file_path, 'w') as f:
+            f.write('{"test_type": "100-fixed", "changes": 25}\n')
+            f.write('{"test_type": "1000-fixed", "changes": 30}\n')
+            f.write('{"test_type": "10000-fixed", "changes": 35}\n')
+
+    def tearDown(self):
+        """Delete the dummy JSON file after testing"""
+        os.remove(self.dummy_json_file_path)
 
     def test_add_suffix_to_col(self):
 
@@ -53,3 +67,11 @@ class TestUtils(unittest.TestCase):
         result_relevant_dict = get_relevant_dict(dummy_dict_of_dicts, 'read')
         self.assertIsInstance(result_relevant_dict, dict)
         self.assertEqual(result_relevant_dict, expected_relevant_dict)
+
+    def test_get_list_of_dict_from_json(self):
+        expected_output = [
+            {'test_type': '10000-fixed', 'changes': 35},
+        ]
+        result_output = get_list_of_dict_from_json(self.dummy_json_file_path)
+        self.assertIsInstance(result_output, list)
+        self.assertEqual(result_output, expected_output)

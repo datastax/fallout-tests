@@ -1,0 +1,25 @@
+name: CI/CD pipeline
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install -e .
+    - name: pylint analysis whilst disabling some checks to avoid false positives
+      run: |
+        pylint src --disable=W1514,R0914,R1710,R1733
+    - name: Run unit tests via pytest
+      run: |
+        pytest --cov-report term-missing --cov=src --cov-config=.coveragerc tests/

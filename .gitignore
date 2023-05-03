@@ -1,2 +1,10 @@
-# Exclude idea folder
+# Exclude IDEs-related files and folders
 .idea
+
+# Exclude tests-related files and folders
+*.pytest_cache
+.coverage
+
+# Ignore email report and log file with regressions sent by email
+src/scripts/email_report.txt
+src/scripts/regressions_sent_by_email.txt

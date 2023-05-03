@@ -6,6 +6,7 @@ This Python file contains all constants used throughout the hunter_csv applicati
 CASSANDRA_PROJ_DIR = '/home/ec2-user/cassandra'
 FALLOUT_TESTS_PROJ_DIR = '/home/ec2-user/fallout-tests'
 FALLOUT_TESTS_SHA_PROJ_DIR = '/home/ec2-user/fallout-tests_sha'
+HUNTER_CLONE_PROJ_DIR = '/home/ec2-user/hunter_clone/hunter'
 HUNTER_CSV_PROJ_DIR = '/home/ec2-user/hunter_csv'
 NIGHTLY_RESULTS_DIR = '/home/ec2-user/nightly_results'
 
@@ -48,6 +49,7 @@ SUBSTR_TESTS_NAMES = [
 
 LWT_TEST_RUN_EXEC_TIME = '23:00:00'
 
+# Set to False only if generating hunter csv for the first time.
 PROSPECTIVE_MODE = True
 
 # Metrics' columns for Hunter
@@ -84,3 +86,34 @@ USE_LOG_FILE = True
 
 # Types of performance tests currently supported
 TUPLE_SUPPORTED_TESTS = ('lwt-',)
+
+
+# Email creation-related constants below
+
+# Constants for boto3 to connect to AWS Secret Manager
+REGION_NAME = '<REGION_NAME>'
+SECRET_NAME = '<SECRET_NAME>'
+
+# Thresholds for sending email
+THRESH_PERF_REGRESS = 11  #  A threshold above or below (+/-) which significant changes are reported
+
+# Filename for sending email
+TXT_FILE_W_MSG = 'email_report.txt'
+
+# Filename for logging regressions sent by email
+LOG_FILE_W_MSG = 'regressions_sent_by_email.txt'
+
+# Template email message
+TEMPLATE_MSG = 'Hello,\n\nPlease find the performance regressions detected ' \
+               'by hunter as follows:\n\n\n\nBest regards,\n\nMarianne'
+
+# Receiver's email address
+RECEIVER_EMAIL = '<EMAIL_ADDRESS>'
+
+NEWLINE_SYMBOL = '\n'
+
+LIST_OF_HUNTER_RESULTS_JSONS = [
+    'hunter_result_fixed_100.json', 'hunter_result_fixed_1000.json',
+    'hunter_result_fixed_10000.json', 'hunter_result_rated_100.json',
+    'hunter_result_rated_1000.json', 'hunter_result_rated_10000.json'
+]

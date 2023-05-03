@@ -65,10 +65,23 @@ In future, this constant would be an input argument of a command line tool for e
 - [Install hunter](https://github.com/datastax-labs/hunter#installation)
 - Run `conda env create --file environment.yml` to install required dependencies for codes under `src` and `tests` folders
 
+### Install the Python package via pip
+- Run `pip install -e .` to use the `setup.py` and install the codes as a Python package in editable mode
+
 ### How to generate a csv for Hunter
 - Run `python src/scripts/create_hunter_csv.py`
 - 6 csv files will be output in the top-level directory, which can be fed to Hunter (one at a time for each type of test)
 
+### How to send an email report with performance regressions
+- Run `python src/scripts/create_send_email.py`
+
 ### Linting the codes to create a csv for Hunter
 - Run `isort src` to ensure a correct and consistent order of imports across all `.py` files
 - Run `cd src` and then execute `autopep8 --in-place --recursive .` to ensure adherence to PEP-8 Python coding and styling standards
+
+### How to get the test coverage report with missing lines
+- Run `pytest --cov-report term-missing --cov=src tests/`
+
+### GitHub Actions
+An assessment of code quality and running unit tests via `pylint` and `pytest` respectively are automated via 
+GitHub Actions upon every push.

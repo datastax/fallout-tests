@@ -4,13 +4,19 @@ creation of a csv for Hunter.
 """
 
 import glob
+import json
 import logging
 import os
+from typing import List
 
+import boto3
 import pandas as pd
-from constants import (CASSANDRA_COL_NAME, FALLOUT_TESTS_COL_NAME,
-                       FALLOUT_TESTS_SHA_PROJ_DIR, LWT_TESTS_NAMES,
-                       NIGHTLY_RESULTS_DIR)
+from botocore.exceptions import ClientError
+
+from src.scripts.constants import (CASSANDRA_COL_NAME, FALLOUT_TESTS_COL_NAME,
+                                   FALLOUT_TESTS_SHA_PROJ_DIR, LWT_TESTS_NAMES,
+                                   NEWLINE_SYMBOL, NIGHTLY_RESULTS_DIR,
+                                   REGION_NAME, SECRET_NAME)
 
 
 def add_cols_to_metrics_df(
@@ -66,7 +72,7 @@ def add_suffix_to_col(phase_df: pd.DataFrame, phase: str) -> pd.DataFrame:
     return phase_df
 
 
-def get_git_sha_for_cassandra(input_date: str) -> str:
+def get_git_sha_for_cassandra(input_date: str) -> str:  # pragma: no cover
     """
     Get the Git sha of the Cassandra repo for a given date from a logs.txt file.
 
@@ -82,7 +88,8 @@ def get_git_sha_for_cassandra(input_date: str) -> str:
     list_of_log_file_path = []
     for _ in LWT_TESTS_NAMES:
         log_files_list = glob.glob(
-            f"{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}{os.sep}{'**/performance-tester-dc1-default-sts-0/logs.txt'}",
+            f"{NIGHTLY_RESULTS_DIR}{os.sep}{input_date}{os.sep}"
+            f"{'**/performance-tester-dc1-default-sts-0/logs.txt'}",
             recursive=True
         )
         for log_file_path in log_files_list:
@@ -92,22 +99,24 @@ def get_git_sha_for_cassandra(input_date: str) -> str:
     for logs in log_files_list:
         with open(logs, 'r') as text:
             content = ' '.join(text.readlines())
-            git_sha = content.split('Git SHA: ')[1].split('\n')[0]
+            git_sha = content.split('Git SHA: ')[1].split(NEWLINE_SYMBOL)[0]
             git_sha_list.append(git_sha)
 
-    # Get the first non-empty Git sha as the final one, as at times one subtest may not yield results, whilst
+    # Get the first non-empty Git sha as the final one, as at
+    # times one subtest may not yield results, whilst
     # another one (or all others) may.
     final_cass_sha = ''
-    for i in range(len(git_sha_list)):
-        if git_sha_list[i] != '':
-            final_cass_sha = git_sha_list[i]
+    for _, git_sha_elem in enumerate(git_sha_list):
+        if git_sha_elem != '':
+            final_cass_sha = git_sha_elem
             break
     return final_cass_sha
 
 
-def get_git_sha_for_fallout_tests(input_date: str) -> str:
+def get_git_sha_for_fallout_tests(input_date: str) -> str:  # pragma: no cover
     """
-    Get the Git sha of the fallout-tests repo for a given date from a fallout-tests_git_sha.log file.
+    Get the Git sha of the fallout-tests repo for a given
+    date from a fallout-tests_git_sha.log file.
 
     Args:
         input_date: str
@@ -132,23 +141,32 @@ def get_git_sha_for_fallout_tests(input_date: str) -> str:
     with open(fallout_tests_log_file_list[0], 'r') as text:
         content = ' '.join(text.readlines())
         # The 1st element is the Git sha, the 2nd is the datetime
-        final_fallout_tests_sha = content.split(',')[0]
+        final_fallout_tests_sha = content.split(',', maxsplit=1)[0]
     return final_fallout_tests_sha
 
 
 def get_error_log(test_type: str) -> None:  # pragma: no cover
-    logging.error(f"The type of test '{test_type}' is not supported; please ensure you use either "
-                  f"of the following numbers of partitions (either fixed or rated): 100, 1000, "
-                  f"or 10000.")
+    """
+    Log an error if the test_type were not supported.
+
+    Args:
+        test_type: str
+                A test type to be logged.
+    """
+    logging.error("The type of test '%s' is not supported; please ensure you use either "
+                  "of the following numbers of partitions (either fixed or rated): 100, 1000, "
+                  "or 10000.", test_type)
 
 
 def get_relevant_dict(dict_of_dicts: dict, test_phase: str) -> dict:
     """
-    Get the relevant dictionary (e.g., read- or write-related) from a dictionary of dictionaries.
+    Get the relevant dictionary (e.g., read- or write-related) from
+    a dictionary of dictionaries.
 
     Args:
         dict_of_dicts: dict
-                    A dictionary of dictionaries, each of which hosts the results from a test run (e.g., read or write).
+                    A dictionary of dictionaries, each of which hosts
+                    the results from a test run (e.g., read or write).
         test_phase: str
             The test phase of interest, i.e., 'read' or 'write'.
 
@@ -163,7 +181,7 @@ def get_relevant_dict(dict_of_dicts: dict, test_phase: str) -> dict:
     return relevant_dict
 
 
-def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
+def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:  # pragma: no cover
     """
     Save an input dataframe to a csv file in a chosen filename.
 
@@ -173,5 +191,58 @@ def save_df_to_csv(input_df: pd.DataFrame, path_to_output: str) -> None:
         path_to_output: str
                 The filename where to save the input dataframe.
     """
-
     input_df.to_csv(path_to_output, index=False)
+
+
+def get_aws_secrets() -> dict:  # pragma: no cover
+    """
+    Get secrets (username and password) from the AWS Secret Manager.
+
+    Returns:
+            A dictionary with AWS secrets.
+    """
+    secret_name = SECRET_NAME
+    region_name = REGION_NAME
+
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as client_exception:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise client_exception
+
+    secrets_dict = json.loads(get_secret_value_response['SecretString'])
+    return secrets_dict
+
+
+def get_list_of_dict_from_json(file_path: str) -> List[dict]:
+    """
+    Get list of dictionaries, e.g., results from hunter on
+    performance regressions, from a json file.
+
+    Args:
+        file_path: str
+                The json file path with the file name and extension (.json).
+
+    Returns:
+            A list of dictionaries (one dict for each line in the json file).
+    """
+    hunter_result_list_of_dicts = []
+    with open(file_path, 'r') as json_file:
+        for hunter_result_str in json_file:
+            # Convert each line to a dict
+            hunter_result_dict = json.loads(hunter_result_str)
+            hunter_result_list_of_dicts.append(hunter_result_dict)
+    # Get and return the last dictionary
+    hunter_result_dict = hunter_result_list_of_dicts[-1]
+    hunter_result_list_of_dict = [hunter_result_dict]
+    return hunter_result_list_of_dict
